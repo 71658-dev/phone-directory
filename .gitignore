@@ -9,3 +9,6 @@ phone_directory_synonyms_*.json
 
 # Claude Design 設計系統（本機用，不上傳）
 _ds/
+
+# 範例檔（虛構資料）要上傳
+!examples/phoneData.csv
