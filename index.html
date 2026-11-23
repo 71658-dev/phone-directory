@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分機查詢</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>
+window.__resources = {
+  "https://unpkg.com/react@18.3.1/umd/react.production.min.js": "vendor/react.production.min.js",
+  "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "vendor/react-dom.production.min.js",
+  "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js": "vendor/babel.min.js"
+};
+</script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="ios-kit.css">
+<script src="_ds/ios-27-ui-kit-e8be5781-2d2e-4372-b561-553609c28aca/_ds_bundle.js"></script>
+<script src="phone-search.js"></script>
+<style>
+body { margin: 0; }
+a { color: var(--ios-blue); text-decoration: none; }
+a:hover { opacity: .7; }
+input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
+/* Page tokens. Secondary text darkened to clear WCAG AA (4.5:1) on the light surfaces;
+   in-flow surfaces are near-opaque and unblurred, blur is kept for floating layers only. */
+.ios[data-theme="light"] {
+  --ios-label-2: rgba(60, 60, 67, 0.80);
+  --ios-glass-fill: rgba(255, 255, 255, 0.84);
+  --pg-surface: rgba(255, 255, 255, 0.92);
+}
+.ios[data-theme="dark"] {
+  --pg-surface: rgba(28, 28, 30, 0.92);
+}
+.pg-surface {
+  background: var(--pg-surface);
+  box-shadow: inset 0 0 0 var(--ios-hairline) var(--ios-separator-nonopaque), 0 1px 3px rgba(0, 0, 0, .06);
+}
+/* Keyboard focus — visible everywhere, only for keyboard users. */
+.ios :focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 2px; }
+.ios label.ios-row:focus-within { outline: 2px solid var(--ios-blue); outline-offset: -2px; border-radius: 12px; }
+.ios .pg-field:focus-within { box-shadow: inset 0 0 0 2px var(--ios-blue); }
+.ios-segmented > button.seg { margin: 0; border: none; background: transparent; font-family: inherit; color: inherit; cursor: pointer; }
+/* Result rows */
+.pg-ext {
+  flex-shrink: 0; padding: 0 6px; margin-left: -6px; border: none; border-radius: 10px; background: transparent;
+  color: var(--ios-blue); font-family: inherit; font-size: 24px; line-height: 32px; font-weight: 700;
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums; text-align: left; cursor: copy;
+}
+.pg-ext:hover { background: color-mix(in srgb, var(--ios-blue) 10%, transparent); }
+.ios-btn.pg-row-act { color: var(--ios-label-2); }
+.ios-btn.pg-row-act:hover { color: var(--ios-blue); }
+.pg-chips { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+/* Desktop: everything visible, wrapping; quick filters on their own line, departments below. */
+.pg-chip-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; text-align: left; }
+.pg-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pg-chips::-webkit-scrollbar { display: none; }
+.pg-kbd {
+  flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--ios-separator-nonopaque); color: var(--ios-label-2);
+  font-size: 12px; line-height: 22px; text-align: center;
+}
+</style>
+</helmet>
+<div class="ios" data-theme="{{ theme }}" style="position:relative;min-height:100vh;padding-top:{{ appTopPad }};background:var(--ios-bg-grouped-primary);color:var(--ios-label-1);font-family:var(--ios-font);font-size:15px;line-height:1.5;isolation:isolate">
+  {{ ambientBg }}
+
+  <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;top:16px;right:16px;z-index:5;display:flex;gap:8px">
+      <sc-if value="{{ canAdd }}" hint-placeholder-val="{{ true }}">
+        <button class="ios-btn is-small is-glass" data-tour="addBtn" onClick="{{ openAdd }}" style="color:var(--ios-blue)">＋ 新增分機</button>
+      </sc-if>
+      <button class="ios-btn is-small is-glass" data-tour="menuBtn" aria-haspopup="menu" aria-expanded="{{ menuExpanded }}" onClick="{{ toggleMenu }}">更多 ⋯</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;top:10px;right:12px;z-index:5;display:flex;gap:8px">
+      <button class="ios-btn is-medium is-glass is-symbol" data-tour="menuBtn" aria-label="更多功能" aria-haspopup="menu" aria-expanded="{{ menuExpanded }}" onClick="{{ toggleMenu }}" style="font-size:20px;font-weight:700">⋯</button>
+      <sc-if value="{{ canAdd }}" hint-placeholder-val="{{ true }}">
+        <button class="ios-btn is-medium is-glass is-symbol" data-tour="addBtn" aria-label="新增分機" onClick="{{ openAdd }}" style="font-size:22px;color:var(--ios-blue)">＋</button>
+      </sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:4"></div>
+    <div role="menu" aria-label="更多功能" style="position:fixed;top:{{ menuTop }};right:{{ menuRight }};z-index:6;width:min(240px, calc(100vw - 24px));padding:6px;box-sizing:border-box;display:flex;flex-direction:column;border-radius:20px;background:color-mix(in srgb, var(--ios-bg-primary) 92%, transparent);box-shadow:inset 0 0 0 1px var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%)">
+      <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="5">
+        <button role="menuitem" data-tour="{{ m.tour }}" onClick="{{ m.onClick }}" style="display:flex;align-items:center;width:100%;min-height:40px;padding:0 14px;border:none;border-radius:12px;background:transparent;font-family:inherit;font-size:var(--ios-subhead-size);color:var(--ios-label-1);text-align:left;cursor:pointer" style-hover="background:var(--ios-fill-4)" style-active="background:var(--ios-fill-3)">{{ m.label }}</button>
+      </sc-for>
+    </div>
+  </sc-if>
+  <input type="file" accept=".xlsx,.csv" ref="{{ fileRef }}" onChange="{{ onFile }}" style="display:none">
+  <input type="file" accept=".json" ref="{{ synFileRef }}" onChange="{{ onSynFile }}" style="display:none">
+
+  <div style="max-width:640px;margin:0 auto;padding:16px;padding-top:{{ heroPadTop }};min-height:{{ heroMinH }};text-align:{{ heroAlign }};box-sizing:border-box;transition:padding-top .45s cubic-bezier(.4,0,.2,1), min-height .45s cubic-bezier(.4,0,.2,1)">
+    <h1 style="margin:0 0 {{ titleGap }};font-size:var(--ios-largetitle-size);line-height:var(--ios-largetitle-lh);font-weight:700;letter-spacing:-.01em">分機查詢</h1>
+
+    <sc-if value="{{ noRoster }}" hint-placeholder-val="{{ false }}">
+      <div class="ios-list pg-surface" style="width:100%;padding:24px 16px;margin-bottom:16px;border-radius:28px">
+        <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">還沒有分機名冊</div>
+        <p style="font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);margin:0 auto 16px;max-width:30em;text-wrap:pretty">匯入局內的 <strong style="color:var(--ios-label-1)">Excel 分機一覽表 (.xlsx)</strong> 或同事匯出的 <strong style="color:var(--ios-label-1)">phoneData.csv</strong> 就能開始查。資料只存在這台電腦的瀏覽器裡。</p>
+        <div style="display:flex;gap:8px;justify-content:{{ heroJustify }};flex-wrap:wrap">
+          <button class="ios-btn is-medium is-prominent" onClick="{{ pickFile }}">匯入名冊檔案</button>
+          <button class="ios-btn is-medium is-bordered" onClick="{{ openTutorial }}">查看使用教學</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasRoster }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ isDemo }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;padding:10px 14px;border-radius:18px;background:color-mix(in srgb, var(--ios-orange) 16%, transparent);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);text-align:left">
+          <span><strong>目前顯示的是示範資料</strong>，人名與分機都是虛構的。</span>
+          <button class="ios-btn is-small is-prominent" onClick="{{ pickFile }}">匯入真實名冊</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasServerUpdate }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;padding:10px 14px;border-radius:18px;background:color-mix(in srgb, var(--ios-blue) 14%, transparent);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);text-align:left">
+          <span>{{ serverUpdateText }}</span>
+          <span style="display:flex;gap:6px">
+            <button class="ios-btn is-small is-borderless" onClick="{{ skipServerUpdate }}">略過</button>
+            <button class="ios-btn is-small is-prominent" onClick="{{ viewServerUpdate }}">檢視並更新</button>
+          </span>
+        </div>
+      </sc-if>
+      <div data-tour="search" style="display:flex;align-items:center;gap:10px;height:var(--ios-field-h);padding:0 14px;border-radius:var(--ios-radius-capsule);background:var(--pg-surface);box-shadow:{{ searchRing }};transition:box-shadow .15s ease">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--ios-label-2)"><circle cx="11" cy="11" r="7.5"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+        <input type="text" ref="{{ searchRef }}" value="{{ search }}" onChange="{{ onSearch }}" onFocus="{{ onFocus }}" onBlur="{{ onBlur }}" placeholder="搜尋姓名、分機或業務…" autoComplete="off" spellCheck="false" aria-label="搜尋分機" style="flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
+        <sc-if value="{{ hasSearch }}" hint-placeholder-val="{{ false }}">
+          <button aria-label="清除搜尋" title="清除搜尋 (Esc)" onClick="{{ clearSearch }}" style="flex-shrink:0;width:22px;height:22px;padding:0;border:none;border-radius:50%;background:var(--ios-label-2);color:var(--ios-bg-primary);font-size:11px;line-height:22px;cursor:pointer">✕</button>
+        </sc-if>
+        <sc-if value="{{ showKbd }}" hint-placeholder-val="{{ true }}">
+          <span class="pg-kbd" aria-hidden="true" title="按 / 開始搜尋，Esc 清除">/</span>
+        </sc-if>
+      </div>
+      <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+      <div data-tour="chips" class="pg-chip-rows">
+        <div class="pg-chip-row" role="group" aria-label="快速篩選">
+          <sc-for list="{{ chipsQuick }}" as="c" hint-placeholder-count="3">
+            <button class="ios-btn is-small {{ c.cls }}" aria-pressed="{{ c.selected }}" onClick="{{ c.onClick }}" style="white-space:nowrap">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div class="pg-chip-row" role="group" aria-label="依科室篩選">
+          <sc-for list="{{ chipsDept }}" as="c" hint-placeholder-count="8">
+            <button class="ios-btn is-small {{ c.cls }}" aria-pressed="{{ c.selected }}" onClick="{{ c.onClick }}" style="white-space:nowrap">{{ c.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+      <div data-tour="chips" role="group" aria-label="篩選" class="pg-chips" ref="{{ chipsRef }}" style="margin:12px -16px 0;padding:2px 16px 6px;-webkit-overflow-scrolling:touch">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="8">
+          <button class="ios-btn is-small {{ c.cls }}" aria-pressed="{{ c.selected }}" onClick="{{ c.onClick }}" style="flex-shrink:0;white-space:nowrap">{{ c.label }}</button>
+        </sc-for>
+      </div>
+      </sc-if>
+      <sc-if value="{{ hasMeta }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:12px;text-align:left;font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);color:var(--ios-label-2)">{{ metaText }}</div>
+      </sc-if>
+      <sc-if value="{{ homeHint }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:28px auto 0;max-width:36ch;font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);text-wrap:pretty">點分機號碼就會複製，點 ★ 可以釘選常聯絡的人；之後打開這頁，他們會直接列在這裡。</p>
+      </sc-if>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ showResults }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:900px;margin:0 auto;padding:0 16px 32px">
+      <sc-if value="{{ hasDeptCard }}" hint-placeholder-val="{{ false }}">
+        <div class="pg-surface" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:4px;padding:12px 16px;border-radius:22px">
+          <span style="font-weight:600;margin-right:4px">{{ deptCardTitle }}</span>
+          <sc-if value="{{ deptCardHasFloor }}"><span style="padding:1px 9px;border-radius:var(--ios-radius-capsule);box-shadow:inset 0 0 0 1px var(--ios-blue);color:var(--ios-blue);font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh)">{{ deptCardFloor }}</span></sc-if>
+          <sc-for list="{{ deptCardLines }}" as="l"><span style="padding:1px 9px;border-radius:var(--ios-radius-capsule);background:var(--ios-fill-3);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);font-variant-numeric:tabular-nums">{{ l }}</span></sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasLineHits }}" hint-placeholder-val="{{ false }}">
+        <div class="ios-list-header">專線・傳真・公共電話</div>
+        <div class="ios-list pg-surface" style="width:100%;border-radius:22px">
+          <sc-for list="{{ lineHits }}" as="x" hint-placeholder-count="2">
+            <div class="ios-row" style="gap:12px;min-height:44px;background:transparent">
+              <span style="flex-shrink:0;min-width:96px;font-size:var(--ios-footnote-size);color:var(--ios-label-2)">{{ x.where }}</span>
+              <span style="font-weight:600;font-variant-numeric:tabular-nums">{{ x.line }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showCount }}" hint-placeholder-val="{{ true }}">
+        <div class="ios-list-header" style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px">
+          <span>{{ countText }}</span>
+          <sc-if value="{{ hasAlso }}" hint-placeholder-val="{{ false }}"><span style="text-transform:none;color:var(--ios-label-2)">{{ alsoText }}</span></sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasRows }}" hint-placeholder-val="{{ true }}">
+        <div class="ios-list pg-surface" role="list" style="width:100%;border-radius:24px">
+          <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div class="ios-row" role="listitem" data-tour="row-{{ $index }}" style="gap:14px;min-height:56px;padding:6px 8px 6px 18px;background:transparent" style-hover="background:var(--ios-fill-4)">
+              <button class="pg-ext" title="點一下複製分機" aria-label="{{ r.copyLabel }}" onClick="{{ r.onCopy }}" style="min-width:76px"><sc-for list="{{ r.ext }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></button>
+              <div style="flex-shrink:0;width:96px;font-size:var(--ios-body-size);line-height:var(--ios-body-lh);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><sc-for list="{{ r.name }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></div>
+              <sc-if value="{{ r.showDept }}">
+                <span style="flex-shrink:0;padding:2px 9px;border-radius:var(--ios-radius-capsule);background:var(--ios-fill-3);color:var(--ios-label-1);font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh)"><sc-for list="{{ r.dept }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></span>
+              </sc-if>
+              <sc-if value="{{ r.showRole }}">
+                <span style="flex-shrink:0;padding:2px 9px;border-radius:var(--ios-radius-capsule);box-shadow:inset 0 0 0 1px var(--ios-blue);color:var(--ios-blue);font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);font-weight:500"><sc-for list="{{ r.role }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></span>
+              </sc-if>
+              <sc-if value="{{ r.showId }}">
+                <span style="flex-shrink:0;font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);color:var(--ios-label-2);font-variant-numeric:tabular-nums">工號 <sc-for list="{{ r.id }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:var(--ios-label-1);font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></span>
+              </sc-if>
+              <sc-if value="{{ r.showTask }}">
+                <div title="{{ r.taskTitle }}" style="flex:1;min-width:0;font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><sc-for list="{{ r.task }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:var(--ios-label-1);font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></div>
+              </sc-if>
+              <sc-if value="{{ r.hideTask }}"><div style="flex:1"></div></sc-if>
+              <div style="display:flex;gap:2px;flex-shrink:0">
+                <button class="ios-btn is-small is-borderless is-symbol" data-tour="pin-{{ $index }}" title="{{ r.pinTitle }}" aria-label="{{ r.pinLabel }}" aria-pressed="{{ r.isPinned }}" onClick="{{ r.onPin }}" style="font-size:17px;color:{{ r.starColor }}">★</button>
+                <button class="ios-btn is-small is-borderless is-symbol pg-row-act" data-tour="edit-{{ $index }}" title="編輯或刪除" aria-label="{{ r.editLabel }}" onClick="{{ r.onEdit }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></button>
+              </div>
+            </div>
+          </sc-for>
+          </sc-if>
+          <sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div class="ios-row" role="listitem" data-tour="row-{{ $index }}" onClick="{{ r.onEdit }}" style="gap:10px;min-height:64px;padding:8px 2px 8px 14px;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent" style-active="background:var(--ios-fill-4)">
+              <button class="pg-ext" aria-label="{{ r.copyLabel }}" onClick="{{ r.onCopy }}" style="min-width:64px;min-height:44px;font-size:22px;cursor:pointer"><sc-for list="{{ r.ext }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></button>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                  <span style="flex-shrink:1;min-width:0;font-size:var(--ios-body-size);line-height:var(--ios-body-lh);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><sc-for list="{{ r.name }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></span>
+                  <sc-if value="{{ r.hasDept }}"><span style="flex-shrink:0;font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);color:var(--ios-label-2)"><sc-for list="{{ r.dept }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></span></sc-if>
+                  <sc-if value="{{ r.hasRole }}"><span style="flex-shrink:0;padding:0 7px;border-radius:var(--ios-radius-capsule);box-shadow:inset 0 0 0 1px var(--ios-blue);color:var(--ios-blue);font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);font-weight:500"><sc-for list="{{ r.role }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></span></sc-if>
+                </div>
+                <sc-if value="{{ r.showId }}"><div style="font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);color:var(--ios-label-2);font-variant-numeric:tabular-nums">工號 <sc-for list="{{ r.id }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:var(--ios-label-1);font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></div></sc-if>
+                <sc-if value="{{ r.hasTask }}"><div style="font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><sc-for list="{{ r.task }}" as="s"><sc-if value="{{ s.m }}"><mark style="background:color-mix(in srgb, var(--ios-yellow) 45%, transparent);color:inherit;font-weight:700;border-radius:3px;padding:0 1px">{{ s.t }}</mark></sc-if><sc-if value="{{ s.p }}"><span>{{ s.t }}</span></sc-if></sc-for></div></sc-if>
+              </div>
+              <button data-tour="pin-{{ $index }}" title="{{ r.pinTitle }}" aria-label="{{ r.pinLabel }}" aria-pressed="{{ r.isPinned }}" onClick="{{ r.onPin }}" style="flex-shrink:0;width:44px;height:44px;padding:0;border:none;border-radius:50%;background:transparent;font-size:20px;line-height:44px;cursor:pointer;color:{{ r.starColor }}">★</button>
+            </div>
+          </sc-for>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:48px 20px">
+          <div style="font-size:var(--ios-title3-size);line-height:var(--ios-title3-lh);font-weight:600;margin-bottom:4px">找不到符合的結果</div>
+          <div style="max-width:40ch;margin:0 auto;font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);text-wrap:pretty">{{ emptySub }}</div>
+          <sc-if value="{{ emptyShowAll }}" hint-placeholder-val="{{ false }}">
+            <button class="ios-btn is-small is-bordered" style="margin-top:14px" onClick="{{ emptyToAll }}">改搜尋全部科室</button>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ modalBackdrop }}" style="position:fixed;inset:0;z-index:10;display:grid;place-items:{{ sheetPlace }};padding:{{ sheetPad }};background:rgba(0,0,0,.16)">
+      <form role="dialog" aria-modal="true" aria-label="{{ modalTitle }}" onSubmit="{{ submitForm }}" style="width:{{ formW }};max-height:{{ sheetMaxH }};overflow-y:auto;border-radius:{{ sheetRadius }};background:var(--ios-glass-fill);box-shadow:inset 0 0 0 var(--ios-hairline) var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%)">
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:12px 12px 4px">
+          <div><button type="button" class="ios-btn is-medium is-borderless" title="取消 (Esc)" onClick="{{ closeModal }}">取消</button></div>
+          <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600">{{ modalTitle }}</div>
+          <div style="display:flex;justify-content:flex-end"><button type="submit" class="ios-btn is-medium is-prominent">儲存</button></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:20px;padding:8px 16px 20px">
+          <sc-for list="{{ formGroups }}" as="g" hint-placeholder-count="3">
+            <div class="ios-list" style="width:100%">
+              <sc-for list="{{ g.fields }}" as="f">
+                <label class="ios-row" style="gap:12px">
+                  <span style="flex-shrink:0;width:96px">{{ f.label }}</span>
+                  <input value="{{ f.value }}" onChange="{{ f.onChange }}" required="{{ f.required }}" maxLength="{{ f.max }}" placeholder="{{ f.ph }}" list="{{ f.list }}" style="flex:1;min-width:0;height:44px;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
+                </label>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div>
+            <div class="ios-list-header" style="padding-top:0">承辦業務 / 職掌</div>
+            <div class="ios-list pg-field" style="width:100%">
+              <textarea rows="3" maxLength="300" placeholder="例如：IC/醫事機構卡申請、支援報備" value="{{ taskValue }}" onChange="{{ onTask }}" style="display:block;width:100%;min-height:90px;padding:14px 16px;border:none;outline:none;resize:vertical;background:transparent;font-family:inherit;font-size:var(--ios-body-size);line-height:var(--ios-body-lh);color:var(--ios-label-1);caret-color:var(--ios-blue)"></textarea>
+            </div>
+          </div>
+          <sc-if value="{{ showSheetDelete }}" hint-placeholder-val="{{ false }}">
+            <div class="ios-list" style="width:100%">
+              <button type="button" onClick="{{ sheetDelete }}" style="display:block;width:100%;min-height:48px;border:none;border-radius:inherit;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-red);cursor:pointer">刪除這筆資料</button>
+            </div>
+          </sc-if>
+        </div>
+        <datalist id="deptList"><sc-for list="{{ deptOptions }}" as="o"><option value="{{ o }}"></option></sc-for></datalist>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tutorialOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ tutorialBackdrop }}" style="position:fixed;inset:0;z-index:10;display:grid;place-items:{{ sheetPlace }};padding:{{ sheetPad }};background:rgba(0,0,0,.16)">
+      <div role="dialog" aria-modal="true" style="width:{{ tutW }};height:{{ sheetH }};display:flex;flex-direction:column;gap:12px;padding:16px;box-sizing:border-box;border-radius:{{ sheetRadius }};background:var(--ios-glass-fill);box-shadow:inset 0 0 0 var(--ios-hairline) var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);overflow:hidden">
+        <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:8px;font-size:var(--ios-title3-size);line-height:var(--ios-title3-lh);font-weight:700">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ios-blue)"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            使用教學
+          </div>
+          <button class="ios-btn is-medium is-glass is-symbol" aria-label="關閉教學" title="關閉 (Esc)" onClick="{{ closeTutorial }}">✕</button>
+        </div>
+        <div class="ios-segmented is-small" role="tablist" aria-label="教學導覽" style="width:100%;flex-shrink:0">
+          <sc-for list="{{ tutTabs }}" as="t" hint-placeholder-count="4">
+            <button type="button" class="seg {{ t.cls }}" role="tab" aria-selected="{{ t.selected }}" onClick="{{ t.onClick }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh)">
+
+          <sc-if value="{{ tabSearch }}" hint-placeholder-val="{{ true }}">
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">打幾個字，一次縮到剩幾個人</div>
+              <div style="margin-bottom:10px">多個詞用<strong>空格</strong>隔開，只留下同時符合全部詞的人員。</div>
+              <div style="padding:10px 12px;border-radius:10px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)">打 <span style="display:inline-block;padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">醫政</span> <span style="display:inline-block;padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">專責</span> ➜ 只剩醫政科裡承辦專責業務的人。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">打不準也找得到</div>
+              <div style="text-wrap:pretty">口語、俗稱、縮寫都可以——系統會自動幫你對照到名冊上實際的寫法，命中的字會用黃底標出來；用到同義詞時，結果上方也會註明「同時搜尋了…」。</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));gap:8px 14px;margin-top:12px">
+                <sc-for list="{{ tutPairs }}" as="p" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:var(--ios-footnote-size)">
+                    <span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">{{ p.a }}</span>
+                    <span style="color:var(--ios-label-3)">➜</span>
+                    <span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">{{ p.b }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">科室篩選、★ 常用</div>
+              <div>點搜尋框下方的科室按鈕，只看該科室的人。<br>點人員列右側的 <strong>★</strong> 釘選常用聯絡人，之後點「★ 常用」隨時叫出來，釘選的人一律排最上面，打開這頁時也會直接列出來。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">快捷鍵</div>
+              <div><span style="display:inline-block;padding:0 7px;margin:0 2px;border-radius:5px;background:var(--ios-fill-3);font-family:var(--ios-font-mono);font-size:12px">/</span> 直接跳到搜尋框開始打字。 <span style="display:inline-block;padding:0 7px;margin:0 2px;border-radius:5px;background:var(--ios-fill-3);font-family:var(--ios-font-mono);font-size:12px">Esc</span> 清空搜尋，或關掉目前的視窗。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">複製分機・最近查過</div>
+              <div>點一下藍色的分機號碼就會複製起來；複製過的人會記在「<strong>最近</strong>」，下次不用再搜尋。搜尋「傳真」、「專線」或科室名稱，也會列出各科的專線與傳真號碼。</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabCrud }}" hint-placeholder-val="{{ false }}">
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:10px">新增</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;margin-top:0;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">1</span><span>按右上角「<strong>＋ 新增分機</strong>」（手機版是「＋」）。</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">2</span><span>填<strong style="color:var(--ios-blue)">姓名</strong>和<strong style="color:var(--ios-blue)">分機</strong>（必填），其餘欄位盡量填，方便同事之後搜尋到。</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">3</span><span>按「<strong>儲存</strong>」，馬上生效。</span></div>
+              </div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">編輯</div>
+              <div>按人員列右側的鉛筆圖示（手機版直接點那一列），改完想改的欄位，按「儲存」即可。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">刪除</div>
+              <div>先打開編輯視窗，按最下方的「刪除這筆資料」，系統會再問一次才刪，不怕手滑按到。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">資料放在哪裡</div>
+              <div style="padding:10px 12px;border-radius:10px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)">新增、編輯、刪除都只存在<strong>這台電腦的瀏覽器裡</strong>，不會上傳到任何伺服器。</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabSync }}" hint-placeholder-val="{{ false }}">
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">第一次使用</div>
+              <div>畫面出現「還沒有分機名冊」時，按「<strong>匯入名冊檔案</strong>」，選取局內的 <strong>Excel 分機一覽表 (.xlsx)</strong>，或同事匯出的 <code style="font-family:var(--ios-font-mono);font-size:13px">phoneData.csv</code> 就能開始用。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">換成最新名冊</div>
+              <div>拿到新版 Excel 分機表時，按右上角「<strong>更多</strong>」→「<strong>匯入名冊</strong>」直接選 .xlsx 檔。系統會先列出<strong style="color:var(--ios-green)">新增</strong>、<strong style="color:var(--ios-red)">刪除</strong>、<strong style="color:var(--ios-orange)">變更</strong>的人，確認後按「套用更新」才會寫入；大家手動填的業務內容都會保留。</div>
+              <div style="margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)">Excel 開著的時候，資料夾裡會多一個檔名開頭是 <code style="font-family:var(--ios-font-mono)">~$</code> 的暫存檔，那個不是名冊，請選沒有 <code style="font-family:var(--ios-font-mono)">~$</code> 的檔案。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">匯入錯了怎麼辦</div>
+              <div>每次更新前會自動保留一份舊資料，在「<strong>更多</strong>」選單按「<strong>復原匯入</strong>」就能回到匯入前的狀態。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">補上新同事的業務</div>
+              <div>新加入名冊的人業務欄位是空的。點科室列最後的「<strong>待補業務</strong>」，就能列出所有還沒填業務的人，逐一點鉛筆補上。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">備份你改過的資料</div>
+              <div>手動補充或修改過資料後，按右上角「<strong>更多</strong>」→「<strong>匯出 CSV</strong>」存一份，檔名會自動加上日期，避免清瀏覽器紀錄時整批遺失。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">進階：放在共用網站上（管理員）</div>
+              <div>把這個資料夾放到局內網站，並在同一層放一份 <code style="font-family:var(--ios-font-mono);font-size:13px">phoneData.csv</code>，同事打開網頁時就會自動載入；之後替換這個 CSV，大家的畫面會出現「名冊有更新」提示，按一下就能比對更新。直接從電腦開啟檔案時瀏覽器不允許自動讀取，只能手動匯入。</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ tabSynonym }}" hint-placeholder-val="{{ false }}">
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">這是什麼</div>
+              <div>就是「搜尋」頁籤提到的口語對照表——<span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">打針</span> ➜ <span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">疫苗</span> 這類寫法。按右上角「<strong>更多</strong>」→「<strong>詞庫管理</strong>」就能自己新增或調整，不用等改版。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:10px">新增對照詞</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">1</span><span>按「<strong>＋ 新增詞彙</strong>」。</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">2</span><span>填<strong style="color:var(--ios-blue)">口語 / 民間俗稱</strong>（例如「月子中心」），以及<strong style="color:var(--ios-blue)">對應名冊業務標籤</strong>，多個用逗號隔開（例如「產家, 產後護理」）。</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">3</span><span>按「<strong>儲存詞彙</strong>」，搜尋馬上就找得到。</span></div>
+              </div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">編輯・刪除・找詞</div>
+              <div>按列表右側的鉛筆圖示修改，或垃圾桶圖示刪除（會再問一次才刪）。詞庫上方的搜尋框可以用口語或業務關鍵字快速找到已建的對照詞。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">匯出・匯入・清空詞庫</div>
+              <div>「匯出」存成 JSON 檔備份，方便帶到別台電腦用；「匯入」會把 JSON 內的對照詞合併進現有詞庫；「清空詞庫」會刪除所有對照詞，詞庫預設是空的。</div>
+            </div>
+            <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
+              <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">資料放在哪裡</div>
+              <div style="padding:10px 12px;border-radius:10px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)">自訂的對照詞一樣只存在<strong>這台電腦的瀏覽器裡</strong>，不會上傳到任何伺服器；換電腦要用的話記得先匯出再到新電腦匯入。</div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex-shrink:0;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding-top:12px;box-shadow:inset 0 var(--ios-hairline) 0 var(--ios-separator-nonopaque)">
+          <button class="ios-btn is-medium is-glass" onClick="{{ startTour }}">直接示範一次</button>
+          <button class="ios-btn is-medium is-prominent" onClick="{{ closeTutorial }}">我知道了，開始使用</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ synOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ synBackdrop }}" style="position:fixed;inset:0;z-index:10;display:grid;place-items:{{ sheetPlace }};padding:{{ sheetPad }};background:rgba(0,0,0,.16)">
+      <div role="dialog" aria-modal="true" style="width:{{ synW }};height:{{ sheetH }};display:flex;flex-direction:column;gap:12px;padding:16px;box-sizing:border-box;border-radius:{{ sheetRadius }};background:var(--ios-glass-fill);box-shadow:inset 0 0 0 var(--ios-hairline) var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);overflow:hidden">
+        <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:8px;font-size:var(--ios-title3-size);line-height:var(--ios-title3-lh);font-weight:700">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ios-blue)"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M22 22h-6l-3-7 6-3 3 10Z"></path></svg>
+            口語與同義詞庫管理
+          </div>
+          <button class="ios-btn is-medium is-glass is-symbol" aria-label="關閉詞庫管理" title="關閉 (Esc)" onClick="{{ closeSynonyms }}">✕</button>
+        </div>
+        <div style="flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+          <div class="pg-field" style="flex:1;min-width:180px;display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:10px;background:var(--ios-fill-3)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--ios-label-2)"><circle cx="11" cy="11" r="7.5"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+            <input type="text" value="{{ synQuery }}" onChange="{{ onSynQuery }}" placeholder="搜尋口語或業務關鍵字…" aria-label="搜尋詞庫" style="flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-subhead-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
+          </div>
+          <button class="ios-btn is-small is-prominent" onClick="{{ openAddSyn }}">＋ 新增詞彙</button>
+          <button class="ios-btn is-small is-glass" onClick="{{ pickSynFile }}">匯入</button>
+          <button class="ios-btn is-small is-glass" onClick="{{ exportSyn }}">匯出</button>
+          <button class="ios-btn is-small is-borderless is-destructive" title="清空所有對照詞" onClick="{{ resetSyn }}">清空詞庫</button>
+        </div>
+
+        <sc-if value="{{ synEditing }}" hint-placeholder-val="{{ false }}">
+          <form onSubmit="{{ submitSyn }}" style="flex-shrink:0">
+            <div class="ios-list-header" style="padding-top:0">{{ synEditTitle }}</div>
+            <div class="ios-list" style="width:100%">
+              <label class="ios-row" style="flex-direction:column;align-items:stretch;gap:2px;padding-top:8px;padding-bottom:6px">
+                <span style="font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);color:var(--ios-label-2)">口語 / 民間俗稱 *</span>
+                <input ref="{{ synKeyRef }}" value="{{ synKey }}" onChange="{{ onSynKey }}" placeholder="例如：月子中心" required="{{ true }}" autoComplete="off" style="height:28px;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
+              </label>
+              <label class="ios-row" style="flex-direction:column;align-items:stretch;gap:2px;padding-top:8px;padding-bottom:6px">
+                <span style="font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);color:var(--ios-label-2)">對應名冊業務標籤 (多個以逗號隔開) *</span>
+                <input value="{{ synVals }}" onChange="{{ onSynVals }}" placeholder="例如：產家, 產後護理" required="{{ true }}" autoComplete="off" style="height:28px;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
+              </label>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+              <button type="button" class="ios-btn is-small is-glass" onClick="{{ closeSynEdit }}">取消</button>
+              <button type="submit" class="ios-btn is-small is-prominent">儲存詞彙</button>
+            </div>
+          </form>
+        </sc-if>
+
+        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;border-radius:var(--ios-radius-card);background:var(--ios-bg-grouped-secondary)">
+          <div style="position:sticky;top:0;z-index:1;display:grid;grid-template-columns:26% 1fr 84px;gap:12px;padding:8px 16px;background:var(--ios-bg-grouped-secondary);box-shadow:inset 0 calc(var(--ios-hairline) * -1) 0 var(--ios-separator-nonopaque);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);color:var(--ios-label-2)">
+            <div>口語 / 俗稱關鍵字</div><div>自動映射之名冊業務標籤</div><div style="text-align:center">操作</div>
+          </div>
+          <sc-for list="{{ synRows }}" as="s" hint-placeholder-count="8">
+            <div class="ios-row" style="display:grid;grid-template-columns:26% 1fr 84px;gap:12px;min-height:48px;padding-top:6px;padding-bottom:6px">
+              <div style="font-size:var(--ios-subhead-size);font-weight:600;color:var(--ios-blue)">{{ s.key }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px">
+                <sc-for list="{{ s.vals }}" as="v"><span style="padding:1px 8px;border-radius:var(--ios-radius-capsule);background:var(--ios-fill-3);font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);font-weight:500">{{ v }}</span></sc-for>
+              </div>
+              <div style="display:flex;justify-content:center;gap:2px">
+                <button class="ios-btn is-small is-borderless is-symbol" title="編輯" aria-label="{{ s.editLabel }}" onClick="{{ s.onEdit }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg></button>
+                <button class="ios-btn is-small is-borderless is-symbol is-destructive" title="刪除" aria-label="{{ s.delLabel }}" onClick="{{ s.onDelete }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"></path></svg></button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ synEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:36px 12px;font-size:var(--ios-footnote-size);color:var(--ios-label-2)">找不到相符的詞庫項目</div>
+          </sc-if>
+        </div>
+
+        <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="font-size:var(--ios-footnote-size);color:var(--ios-label-2)">{{ synCountText }}</div>
+          <button class="ios-btn is-medium is-prominent" onClick="{{ closeSynonyms }}">完成</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tourOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:300;background:{{ tourScrimBg }};transition:background-color .2s ease"></div>
+    <sc-if value="{{ tourHasRect }}">
+      <div style="position:fixed;z-index:301;pointer-events:none;top:{{ spotTop }};left:{{ spotLeft }};width:{{ spotW }};height:{{ spotH }};border-radius:var(--ios-radius-capsule);box-shadow:0 0 0 2px var(--ios-blue), 0 0 0 9999px rgba(0,0,0,.32);transition:top .2s ease, left .2s ease, width .2s ease, height .2s ease"></div>
+    </sc-if>
+    <div ref="{{ tipRef }}" role="dialog" aria-modal="true" style="position:fixed;z-index:302;top:{{ tipTop }};left:{{ tipLeft }};transform:{{ tipTransform }};width:min(320px, calc(100vw - 32px));box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:24px;background:color-mix(in srgb, var(--ios-bg-primary) 86%, transparent);box-shadow:inset 0 0 0 1px var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);transition:top .2s ease, left .2s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center;min-height:30px">
+        <span style="font-size:var(--ios-caption1-size);color:var(--ios-label-2);font-variant-numeric:tabular-nums">{{ tourCount }}</span>
+        <button class="ios-btn is-small is-borderless is-symbol" aria-label="結束導覽" title="結束導覽 (Esc)" onClick="{{ endTour }}" style="color:var(--ios-label-2)">✕</button>
+      </div>
+      <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600">{{ tourTitle }}</div>
+      <div style="font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-1);text-wrap:pretty">{{ tourBody }}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px">
+        <div>
+          <sc-if value="{{ tourShowNav }}"><button class="ios-btn is-small is-borderless" style="padding:0 4px" onClick="{{ endTour }}">跳過導覽</button></sc-if>
+        </div>
+        <div style="display:flex;gap:6px">
+          <sc-if value="{{ tourShowNav }}"><button class="ios-btn is-small is-bordered {{ tourPrevCls }}" onClick="{{ prevTour }}">上一步</button></sc-if>
+          <button class="ios-btn is-small is-prominent" onClick="{{ nextTour }}">{{ tourNextLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ previewOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ previewBackdrop }}" style="position:fixed;inset:0;z-index:10;display:grid;place-items:{{ sheetPlace }};padding:{{ sheetPad }};background:rgba(0,0,0,.16)">
+      <div role="dialog" aria-modal="true" aria-label="{{ previewTitle }}" style="width:{{ synW }};height:{{ sheetH }};display:flex;flex-direction:column;gap:10px;padding:16px;box-sizing:border-box;border-radius:{{ sheetRadius }};background:var(--ios-glass-fill);box-shadow:inset 0 0 0 var(--ios-hairline) var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);overflow:hidden">
+        <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="min-width:0;font-size:var(--ios-title3-size);line-height:var(--ios-title3-lh);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ previewTitle }}</div>
+          <button class="ios-btn is-medium is-glass is-symbol" aria-label="取消匯入" title="取消 (Esc)" onClick="{{ closePreview }}">✕</button>
+        </div>
+        <div style="flex-shrink:0;font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh)">{{ previewSummary }}</div>
+        <sc-if value="{{ previewWarn }}" hint-placeholder-val="{{ false }}">
+          <div role="alert" style="flex-shrink:0;padding:10px 12px;border-radius:12px;background:color-mix(in srgb, var(--ios-red) 14%, transparent);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)"><strong>注意：</strong>{{ previewWarnText }}</div>
+        </sc-if>
+        <div style="flex-shrink:0;padding:10px 12px;border-radius:12px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh);color:var(--ios-label-2)">{{ previewNote }}</div>
+        <div style="flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ previewGroups }}" as="g" hint-placeholder-count="3">
+            <div class="ios-list-header" style="flex-shrink:0;color:{{ g.color }};font-weight:600">{{ g.title }}</div>
+            <div class="ios-list" style="flex-shrink:0;width:100%">
+              <sc-for list="{{ g.items }}" as="it">
+                <div class="ios-row" style="gap:10px;min-height:40px">
+                  <span style="flex-shrink:0;min-width:64px;font-weight:600;color:var(--ios-blue);font-variant-numeric:tabular-nums">{{ it.ext }}</span>
+                  <span style="flex-shrink:0;width:64px;font-weight:600">{{ it.name }}</span>
+                  <span style="flex-shrink:0;width:64px;font-size:var(--ios-footnote-size);color:var(--ios-label-2)">{{ it.dept }}</span>
+                  <span style="flex:1;min-width:0;font-size:var(--ios-footnote-size);color:var(--ios-label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ it.info }}">{{ it.info }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:8px;padding-top:4px">
+          <button class="ios-btn is-medium is-glass" onClick="{{ closePreview }}">取消</button>
+          <button class="ios-btn is-medium is-prominent" onClick="{{ confirmPreview }}">套用更新</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" aria-live="polite" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:350;max-width:calc(100vw - 32px);padding:10px 18px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-label-1) 86%, transparent);color:var(--ios-bg-primary);font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);font-weight:500;box-shadow:var(--ios-glass-shadow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ toastText }}</div>
+  </sc-if>
+
+  <sc-if value="{{ alertOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:400;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.16)">
+      <div class="ios-alert" role="alertdialog" aria-modal="true" aria-label="{{ alertTitle }}" style="border-radius:28px;background:var(--ios-glass-fill);box-shadow:inset 0 0 0 var(--ios-hairline) var(--ios-glass-stroke), var(--ios-glass-shadow);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%)">
+        <div class="body">
+          <div class="title">{{ alertTitle }}</div>
+          <sc-if value="{{ alertHasMsg }}"><div class="message">{{ alertMsg }}</div></sc-if>
+        </div>
+        <div class="actions">
+          <sc-for list="{{ alertActions }}" as="a" hint-placeholder-count="1">
+            <button type="button" class="alert-btn {{ a.cls }}" onClick="{{ a.onClick }}">{{ a.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;},&quot;demoData&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;label&quot;:&quot;無名冊時載入示範資料&quot;}}">
+const STORAGE_KEY = 'phone_directory_data_v2';
+// Pins used to be ext strings (v2 / legacy keys, now read-only for migration); v3 holds personKey()s.
+const PINNED_KEY = 'pinned_exts_v2';
+const PEOPLE_PIN_KEY = 'pinned_people_v3';
+const LEGACY_STORAGE_KEY = 'phone_directory_data';
+const LEGACY_PINNED_KEY = 'pinned_exts';
+const SYNONYMS_STORAGE_KEY = 'phone_directory_synonyms_v1';
+const RECENT_KEY = 'phone_directory_recent_v1';
+const META_KEY = 'phone_directory_meta_v1';
+const DEPTINFO_KEY = 'phone_directory_deptinfo_v1';
+const PREV_IMPORT_KEY = 'phone_directory_prev_import_v1';
+const SERVER_SEEN_KEY = 'phone_directory_server_seen_v1';
+const RECENT_MAX = 8;
+// Served over http(s), the page can pick up a shared phoneData.csv placed next to it.
+// Under file:// the browser blocks that fetch, so import stays manual there.
+const SERVER_CSV = 'phoneData.csv';
+
+function readStoredArray(key) {
+  const p = readStoredJSON(key);
+  return Array.isArray(p) ? p : null;
+}
+function readStoredJSON(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? null : JSON.parse(raw);
+  } catch (e) { return null; }
+}
+function writeStoredJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+}
+function removeStored(key) { try { localStorage.removeItem(key); } catch (e) {} }
+function hashText(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+}
+const today = () => new Date().toLocaleDateString('sv-SE');
+const FIELD_LABELS = { ext: '分機', name: '姓名', id: '工號', dept: '科室', role: '職稱', note: '備註', task: '業務' };
+function download(content, type, name) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+const stamp = () => new Date().toISOString().slice(0, 10).replace(/-/g, '');
+const EMPTY_FORM = { name: '', ext: '', dept: '', role: '', id: '', note: '', task: '' };
+
+class Component extends DCLogic {
+  state = {
+    ready: false, data: [], source: 'empty', pinned: [], recent: [], synonyms: {},
+    meta: null, deptInfo: null, hasPrev: false,
+    search: '', activeDept: null, focused: false, narrow: false,
+    modal: null, tutorialTab: null, synOpen: false, synQuery: '', synEdit: null,
+    alert: null, tour: null, tourRect: null, tourTip: null, menuOpen: false,
+    preview: null, serverUpdate: null, toast: null,
+  };
+  fileRef = React.createRef();
+  synFileRef = React.createRef();
+  searchRef = React.createRef();
+  synKeyRef = React.createRef();
+  tipRef = React.createRef();
+  chipsRef = React.createRef();
+  _rows = [];
+
+  TOUR_STEPS = [
+    { target: null, title: '快速導覽', body: '帶你直接在畫面上走一次最常用的搜尋和編輯功能，大約 1 分鐘。' },
+    { target: 'search', title: '打幾個字，一次縮到剩幾個人', body: '多個詞用空格隔開，只留下同時符合全部詞的人員。', action: () => this.setSearch('醫政 IC') },
+    { target: 'row-0', title: '黃底就是命中的地方', body: '搜尋命中的字會用黃底標出來，一看就懂為什麼是這一筆。' },
+    { target: 'pin-0', title: '★ 釘選常用聯絡人', body: '點這顆星星，把常聯絡的人釘選起來；之後一打開這頁就會直接列出來——這裡先幫你點一次示範。', action: () => this.pinFirstRow() },
+    { target: 'search', title: '打不準也找得到', body: '口語、俗稱、縮寫都可以，系統會自動對照到名冊上的寫法，並在結果上方註明同時搜尋了哪些詞。像「打針」會找到「疫苗」。', action: () => this.setSearch('打針') },
+    { target: 'menuBtn', title: '詞庫管理', body: '像「打針→疫苗」這種口語對照都存在詞庫裡。點右上角「更多」再選「詞庫管理」，就能自己新增、修改，不用等改版。匯入、匯出名冊也在這個選單。', mBody: '像「打針→疫苗」這種口語對照都存在詞庫裡。點右上角「⋯」再選「詞庫管理」，就能自己新增、修改，不用等改版。' },
+    { target: 'search', title: '快捷鍵', body: '搜尋框右邊的 / 是提示：在頁面任何地方按 /，就會跳到搜尋框開始打字；按 Esc 清空搜尋，或關掉目前開啟的視窗。', mTitle: '清除搜尋', mBody: '手機上直接點搜尋框就能開始打字，點右側的 ✕ 清空搜尋。' },
+    { target: 'chips', title: '科室篩選', body: '點科室按鈕只看該科室的人；剛剛釘選的人，已經出現在「★ 常用」裡了。' },
+    { target: 'addBtn', title: '新增', body: '按這裡開新增視窗，填姓名和分機（必填）再按「儲存」，馬上生效。', mBody: '按右上角的「＋」開新增視窗，填姓名和分機（必填）再按右上角「儲存」，馬上生效。' },
+    { target: 'edit-0', title: '編輯', body: '按人員列右側的鉛筆圖示，改完想改的欄位，按「儲存」即可更新。', mBody: '點一下人員列就能開啟編輯視窗，改完想改的欄位，按右上角「儲存」。' },
+    { target: 'del-0', title: '刪除', body: '刪除放在編輯視窗裡：按鉛筆打開後，最下方有「刪除這筆資料」，系統會再問一次才刪，不怕手滑按到。', mBody: '在編輯視窗最下方按「刪除這筆資料」，系統會再問一次才刪，不怕手滑按到。' },
+    { target: null, title: '示範結束', body: '這樣就看過主要功能了。有需要可以隨時點「使用教學」查完整說明。' },
+  ];
+
+  componentDidMount() {
+    this.init();
+    this._onKey = (e) => this.onKey(e);
+    this._onResize = () => {
+      this.setState({ narrow: window.innerWidth < 640 });
+      if (this.state.tour && !this.state.tour.noData) this.positionTour();
+    };
+    document.addEventListener('keydown', this._onKey);
+    window.addEventListener('resize', this._onResize);
+  }
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this._onKey);
+    window.removeEventListener('resize', this._onResize);
+    clearTimeout(this._initT);
+    clearTimeout(this._toastT);
+    cancelAnimationFrame(this._tourRaf);
+  }
+  componentDidUpdate(prev) {
+    if (prev.demoData !== this.props.demoData && this.state.source !== 'stored') this.init();
+    // The DC runtime passes only prevProps, so remember what was open last time ourselves.
+    const s = this.state;
+    if (s.activeDept !== this._lastDept) {
+      this._lastDept = s.activeDept;
+      requestAnimationFrame(() => {
+        const sel = this.chipsRef.current && this.chipsRef.current.querySelector('[aria-selected="true"]');
+        if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      });
+    }
+    const was = this._wasOpen || {};
+    this._wasOpen = { alert: s.alert, menuOpen: s.menuOpen, modal: s.modal };
+    // Move keyboard focus into whatever just opened, so Tab / Enter act on it.
+    // The template renders a frame or two after state changes, so retry briefly.
+    const focus = (sel, tries = 12) => requestAnimationFrame(() => {
+      const el = document.querySelector(sel);
+      if (el) el.focus(); else if (tries > 0) focus(sel, tries - 1);
+    });
+    // Alerts focus a safe button — never a destructive one, so a stray Enter can't delete.
+    if (s.alert && s.alert !== was.alert) focus('.ios-alert .alert-btn.is-primary:not(.is-destructive), .ios-alert .alert-btn:first-child');
+    else if (s.menuOpen && !was.menuOpen) focus('[role="menu"] [role="menuitem"]');
+    else if (s.modal && !was.modal) focus('form[role="dialog"] input');
+    if (was.menuOpen && !s.menuOpen && !s.modal && !s.tutorialTab && !s.synOpen && !s.alert && !s.tour) {
+      const btn = document.querySelector('[data-tour="menuBtn"]');
+      if (btn && (document.activeElement === document.body || !document.activeElement)) btn.focus();
+    }
+  }
+
+  init() {
+    const PS = window.PhoneSearch;
+    if (!PS) { this._initT = setTimeout(() => this.init(), 50); return; }
+    let data = readStoredArray(STORAGE_KEY);
+    let source = 'stored';
+    if (!data || !data.length) data = readStoredArray(LEGACY_STORAGE_KEY);
+    if (!data || !data.length) {
+      const demo = this.props.demoData ?? false;
+      data = demo ? PS.DEMO_DATA.map(r => ({ ...r })) : [];
+      source = demo ? 'demo' : 'empty';
+    }
+    let synonyms = { ...PS.DEFAULT_SYNONYMS };
+    try {
+      const raw = localStorage.getItem(SYNONYMS_STORAGE_KEY);
+      const p = raw && JSON.parse(raw);
+      if (p && typeof p === 'object' && !Array.isArray(p)) synonyms = p;
+    } catch (e) {}
+    PS.setSynonyms(synonyms);
+    let pinned = readStoredArray(PEOPLE_PIN_KEY);
+    if (!pinned) {
+      // One-time migration: an old ext pin becomes a pin on everyone who had that ext.
+      const exts = readStoredArray(PINNED_KEY) ?? readStoredArray(LEGACY_PINNED_KEY) ?? [];
+      pinned = [...new Set(data.filter(d => exts.includes(d.ext)).map(PS.personKey))];
+      if (source === 'stored') writeStoredJSON(PEOPLE_PIN_KEY, pinned);
+    }
+    const recent = readStoredArray(RECENT_KEY) ?? [];
+    const meta = readStoredJSON(META_KEY);
+    const deptInfo = readStoredJSON(DEPTINFO_KEY);
+    const hasPrev = !!readStoredJSON(PREV_IMPORT_KEY);
+    this.setState({ ready: true, data, source, pinned, recent, synonyms, meta, deptInfo, hasPrev, narrow: window.innerWidth < 640 },
+      () => this.checkServerRoster());
+  }
+
+  // ── persistence
+  saveData(data) {
+    if (!writeStoredJSON(STORAGE_KEY, data)) this.showAlert('無法儲存資料', '瀏覽器的儲存空間可能已滿。請先用「更多 → 匯出 CSV」備份，再清理瀏覽器資料後重新匯入。');
+    this.setState({ data, source: 'stored' });
+  }
+  savePinned(next) {
+    writeStoredJSON(PEOPLE_PIN_KEY, next);
+    this.setState({ pinned: next });
+  }
+  saveRecent(next) {
+    writeStoredJSON(RECENT_KEY, next);
+    this.setState({ recent: next });
+  }
+  saveMeta(meta) {
+    writeStoredJSON(META_KEY, meta);
+    this.setState({ meta });
+  }
+  saveDeptInfo(deptInfo) {
+    writeStoredJSON(DEPTINFO_KEY, deptInfo);
+    this.setState({ deptInfo });
+  }
+  togglePin(key) {
+    const p = this.state.pinned;
+    this.savePinned(p.includes(key) ? p.filter(k => k !== key) : [...p, key]);
+  }
+  // Keeps pins and recents attached to people whose 工號/姓名/分機 changed; drops the deleted.
+  remapKeys(keyMap, alive) {
+    const fix = (list) => [...new Set(list.map(k => keyMap[k] || k))].filter(k => alive.has(k));
+    this.savePinned(fix(this.state.pinned));
+    this.saveRecent(fix(this.state.recent));
+  }
+  noteRecent(rec) {
+    const k = window.PhoneSearch.personKey(rec);
+    this.saveRecent([k, ...this.state.recent.filter(x => x !== k)].slice(0, RECENT_MAX));
+  }
+  showToast(text) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: text });
+    this._toastT = setTimeout(() => this.setState({ toast: null }), 1800);
+  }
+  copyExt(rec) {
+    const num = (rec.ext.match(/^\d+/) || [rec.ext])[0];
+    copyText(num).then(() => this.showToast(`已複製分機 ${num}（${rec.name}）`), () => this.showToast(`分機 ${num}`));
+    this.noteRecent(rec);
+  }
+  saveSynonyms(map) {
+    window.PhoneSearch.setSynonyms(map);
+    try { localStorage.setItem(SYNONYMS_STORAGE_KEY, JSON.stringify(map)); }
+    catch (e) { this.showAlert('無法儲存詞庫', '瀏覽器的儲存空間可能已滿。請先用「匯出」備份詞庫。'); }
+    this.setState({ synonyms: map });
+  }
+
+  // ── alert (replaces window.alert / confirm)
+  showAlert(title, message) {
+    this.setState({ alert: { title, message, actions: [{ label: '好', cls: 'is-primary' }] } });
+  }
+  confirm(title, message, okLabel, onOk, destructive = true) {
+    this.setState({ alert: { title, message, actions: [
+      { label: '取消' },
+      { label: okLabel, cls: destructive ? 'is-destructive is-primary' : 'is-primary', fn: onOk },
+    ] } });
+  }
+
+  // ── search
+  setSearch(v) { this.setState({ search: v }); }
+  computeRows() {
+    const PS = window.PhoneSearch;
+    const { data, pinned, recent, activeDept, search } = this.state;
+    const tokens = PS.tokenize(search);
+    let filtered = data.map((item, originalIndex) => ({ ...item, originalIndex, _key: PS.personKey(item) }));
+    if (activeDept === 'PINNED') filtered = filtered.filter(d => pinned.includes(d._key));
+    else if (activeDept === 'RECENT') filtered = filtered.filter(d => recent.includes(d._key));
+    else if (activeDept === 'NOTASK') filtered = filtered.filter(d => !d.task);
+    else if (activeDept) filtered = filtered.filter(d => d.dept === activeDept);
+    let expansions = new Map();
+    if (tokens.length) {
+      expansions = PS.resolveExpansions(tokens, filtered);
+      filtered = filtered.reduce((keep, d) => {
+        const m = PS.matchRecord(d, tokens, expansions);
+        if (m) keep.push({ ...d, _match: m });
+        return keep;
+      }, []);
+    }
+    filtered.sort((a, b) => {
+      if (activeDept === 'RECENT') return recent.indexOf(a._key) - recent.indexOf(b._key);
+      const pa = pinned.includes(a._key) ? 0 : 1, pb = pinned.includes(b._key) ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+      const la = a._match && !a._match.exact ? 1 : 0, lb = b._match && !b._match.exact ? 1 : 0;
+      if (la !== lb) return la - lb;
+      return (parseInt(a.ext) || 9999) - (parseInt(b.ext) || 9999);
+    });
+    return { tokens, filtered, expansions, hasQuery: tokens.length > 0 || activeDept !== null };
+  }
+  isCompact() {
+    if (!this.state.ready || !this.state.data.length) return false;
+    const { filtered, hasQuery } = this.computeRows();
+    return hasQuery && filtered.length > 0;
+  }
+
+  // ── CRUD
+  openAdd = () => this.setState({ modal: { title: '新增分機資料', idx: -1, values: { ...EMPTY_FORM } } });
+  openEdit(idx) {
+    const item = this.state.data[idx];
+    if (!item) return;
+    this.setState({ modal: { title: '編輯分機資料', idx, values: { ...EMPTY_FORM, ...item } } });
+  }
+  setField(k, v) { this.setState(s => ({ modal: { ...s.modal, values: { ...s.modal.values, [k]: v } } })); }
+  submitForm = (e) => {
+    e.preventDefault();
+    const { idx, values } = this.state.modal;
+    const item = {};
+    Object.keys(EMPTY_FORM).forEach(k => item[k] = (values[k] || '').trim());
+    const others = this.state.data.filter((_, i) => i !== idx);
+    const sameId = item.id && others.find(d => d.id === item.id);
+    if (sameId) { this.showAlert('工號重複', `工號 ${item.id} 已經是「${sameId.name}（分機 ${sameId.ext}）」的，請確認後再儲存。`); return; }
+    if (others.some(d => d.name === item.name && d.ext === item.ext)) {
+      this.showAlert('資料重複', `「${item.name}（分機 ${item.ext}）」已經在名冊裡了。`); return;
+    }
+    const sameExt = others.filter(d => d.ext === item.ext);
+    // Shared desk lines are real (two people on 308), so a shared ext only asks, never blocks.
+    if (sameExt.length) {
+      this.confirm('分機已有人使用', `分機 ${item.ext} 目前是「${sameExt.map(d => d.name).join('、')}」在用，確定要共用這支分機嗎？`, '仍要儲存',
+        () => this.commitForm(idx, item), false);
+      return;
+    }
+    this.commitForm(idx, item);
+  };
+  commitForm(idx, item) {
+    const PS = window.PhoneSearch;
+    const next = [...this.state.data];
+    if (idx >= 0 && idx < next.length) {
+      const before = next[idx];
+      next[idx] = { ...before, ...item };
+      const from = PS.personKey(before), to = PS.personKey(next[idx]);
+      if (from !== to) this.remapKeys({ [from]: to }, new Set(next.map(PS.personKey)));
+    } else next.unshift(item);
+    this.saveData(next);
+    this.setState({ modal: null });
+  }
+  deleteItem(idx) {
+    const item = this.state.data[idx];
+    if (!item) return;
+    this.confirm(`刪除 ${item.name}（分機 ${item.ext}）？`, '刪除後無法復原。', '刪除', () => {
+      const next = this.state.data.filter((_, i) => i !== idx);
+      this.saveData(next);
+      this.remapKeys({}, new Set(next.map(window.PhoneSearch.personKey)));
+    });
+  }
+
+  // ── import / export
+  pickFile = () => this.fileRef.current && this.fileRef.current.click();
+  onFile = (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const PS = window.PhoneSearch;
+    const isXlsx = /\.xlsx$/i.test(file.name);
+    if (/^~\$/.test(file.name)) {
+      this.showAlert('這是 Excel 的暫存檔', '檔名開頭是「~$」的檔案只是 Excel 開啟時產生的鎖定檔，裡面沒有資料。請選同一個資料夾裡沒有「~$」的那個檔案。');
+      return;
+    }
+    // A page left open across an update can pair this script with an old phone-search.js.
+    if (!PS.parseRosterXlsx || !PS.diffRoster) {
+      this.showAlert('請重新整理頁面', '程式已更新，但這個分頁還在用舊版。請按 Ctrl+F5 重新整理後再匯入。');
+      return;
+    }
+    const read = isXlsx ? file.arrayBuffer().then(PS.parseRosterXlsx) : file.text().then(PS.parseRosterCSV);
+    read.then((res) => {
+      if (res.error) { this.showAlert('匯入失敗', res.error); return; }
+      this.stageImport(res.rows, {
+        kind: isXlsx ? 'xlsx' : 'csv', fileName: file.name,
+        deptInfo: isXlsx ? { depts: res.deptInfo, general: res.general } : null,
+      });
+    }).catch((err) => {
+      console.error('[分機查詢] 匯入失敗', err);
+      this.showAlert('匯入失敗', `${(err && err.message) || err || '無法讀取這個檔案。'}（請把這段訊息截圖回報）`);
+    });
+  };
+  // A first import (or replacing demo data) applies directly; anything else goes through the preview.
+  stageImport(rows, src) {
+    const PS = window.PhoneSearch;
+    const opts = src.kind === 'xlsx' ? { keep: ['note', 'task'] } : { keepBlank: ['note', 'task'] };
+    if (this.state.source !== 'stored' || !this.state.data.length) {
+      const diff = PS.diffRoster([], rows, opts);
+      this.applyImport(diff, src, false);
+      this.showAlert(`已匯入 ${diff.merged.length} 筆分機`);
+      return;
+    }
+    const diff = PS.diffRoster(this.state.data, rows, opts);
+    if (!diff.added.length && !diff.removed.length && !diff.changed.length) {
+      if (src.deptInfo) this.saveDeptInfo(src.deptInfo);
+      this.saveMeta({ updatedAt: today(), fileName: src.fileName, kind: src.kind });
+      this.setState({ serverUpdate: null });
+      this.showAlert('名冊已是最新', `「${src.fileName}」和目前的資料完全相同，不需要更新。`);
+      return;
+    }
+    this.setState({ preview: { diff, src }, serverUpdate: null });
+  }
+  applyImport(diff, src, keepBackup = true) {
+    const PS = window.PhoneSearch;
+    if (keepBackup) {
+      writeStoredJSON(PREV_IMPORT_KEY, { data: this.state.data, meta: this.state.meta, pinned: this.state.pinned, recent: this.state.recent });
+      this.setState({ hasPrev: true });
+    }
+    this.saveData(diff.merged);
+    this.remapKeys(diff.keyMap, new Set(diff.merged.map(PS.personKey)));
+    if (src.deptInfo) this.saveDeptInfo(src.deptInfo);
+    this.saveMeta({ updatedAt: today(), fileName: src.fileName, kind: src.kind });
+    if (src.serverHash) writeStoredJSON(SERVER_SEEN_KEY, src.serverHash);
+    this.setState({ preview: null });
+  }
+  confirmPreview = () => {
+    const { diff, src } = this.state.preview;
+    this.applyImport(diff, src);
+    this.showAlert('名冊已更新', `新增 ${diff.added.length}、刪除 ${diff.removed.length}、變更 ${diff.changed.length} 筆。若有問題，按「復原匯入」就能回到匯入前。`);
+  };
+  undoImport = () => {
+    const prev = readStoredJSON(PREV_IMPORT_KEY);
+    if (!prev || !Array.isArray(prev.data)) return;
+    this.confirm('復原上次匯入？', `會回到匯入前的 ${prev.data.length} 筆資料，之後所做的修改也會一併還原。`, '復原', () => {
+      this.saveData(prev.data);
+      this.savePinned(prev.pinned || []);
+      this.saveRecent(prev.recent || []);
+      if (prev.meta) this.saveMeta(prev.meta); else { removeStored(META_KEY); this.setState({ meta: null }); }
+      removeStored(PREV_IMPORT_KEY);
+      this.setState({ hasPrev: false });
+      setTimeout(() => this.showAlert('已復原為匯入前的資料。'), 0);
+    });
+  };
+  checkServerRoster() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    fetch(SERVER_CSV, { cache: 'no-cache' }).then(r => r.ok ? r.text() : null).then((text) => {
+      if (!text) return;
+      const res = window.PhoneSearch.parseRosterCSV(text);
+      if (res.error) return;
+      const src = { kind: 'csv', fileName: `${SERVER_CSV}（共用資料夾）`, deptInfo: null, serverHash: hashText(text) };
+      if (this.state.source !== 'stored' || !this.state.data.length) { this.stageImport(res.rows, src); return; }
+      if (readStoredJSON(SERVER_SEEN_KEY) === src.serverHash) return;
+      const diff = window.PhoneSearch.diffRoster(this.state.data, res.rows, { keepBlank: ['note', 'task'] });
+      if (!diff.added.length && !diff.removed.length && !diff.changed.length) { writeStoredJSON(SERVER_SEEN_KEY, src.serverHash); return; }
+      this.setState({ serverUpdate: { rows: res.rows, src, diff } });
+    }).catch(() => {});
+  }
+  exportCSV = () => download('\uFEFF' + window.PhoneSearch.buildCSV(this.state.data), 'text/csv;charset=utf-8;', `phoneData_${stamp()}.csv`);
+
+  // ── synonyms
+  openSynEdit(key) {
+    const s = this.state.synonyms;
+    this.setState({ synEdit: key == null
+      ? { orig: null, title: '新增口語對照詞', key: '', vals: '' }
+      : { orig: key, title: `編輯對照詞：${key}`, key, vals: (s[key] || []).join(', ') } },
+      () => this.synKeyRef.current && this.synKeyRef.current.focus());
+  }
+  submitSyn = (e) => {
+    e.preventDefault();
+    const { orig, key: rawKey, vals: rawVal } = this.state.synEdit;
+    if (!rawKey.trim() || !rawVal.trim()) return;
+    const key = rawKey.trim().toLowerCase();
+    if (key === '__proto__') { this.showAlert('此關鍵字無法使用，請換一個詞。'); return; }
+    const values = rawVal.trim().split(/[,，、\s]+/).map(v => v.trim()).filter(Boolean);
+    if (!values.length) { this.showAlert('請至少填寫一個對應的名冊詞彙。'); return; }
+    const next = { ...this.state.synonyms };
+    if (orig && orig !== key) delete next[orig];
+    next[key] = values;
+    this.saveSynonyms(next);
+    this.setState({ synEdit: null });
+  };
+  deleteSyn(key) {
+    this.confirm(`確定要刪除「${key}」的口語對應規則嗎？`, '', '刪除', () => {
+      const next = { ...this.state.synonyms };
+      delete next[key];
+      this.saveSynonyms(next);
+    });
+  }
+  resetSyn = () => this.confirm('確定要清空同義詞庫嗎？', '所有對照詞都會被刪除，建議先匯出備份。', '清空', () => {
+    this.saveSynonyms({ ...window.PhoneSearch.DEFAULT_SYNONYMS });
+    setTimeout(() => this.showAlert('已還原為預設詞庫'), 0);
+  });
+  pickSynFile = () => this.synFileRef.current && this.synFileRef.current.click();
+  onSynFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          this.showAlert('匯入失敗', '檔案格式不符（需為合法的同義詞 JSON 物件）。'); return;
+        }
+        const next = { ...this.state.synonyms };
+        let count = 0;
+        Object.entries(parsed).forEach(([k, v]) => {
+          const key = String(k).trim().toLowerCase();
+          if (!key || key === '__proto__') return;
+          const arr = Array.isArray(v) ? v.map(x => String(x).trim()).filter(Boolean) : [String(v).trim()];
+          if (arr.length) { next[key] = arr; count++; }
+        });
+        this.saveSynonyms(next);
+        this.showAlert(`已匯入 ${count} 組同義詞`);
+      } catch (err) { this.showAlert('匯入失敗', 'JSON 解析錯誤。'); }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  };
+  exportSyn = () => download(JSON.stringify(this.state.synonyms, null, 2), 'application/json;charset=utf-8;', `phone_directory_synonyms_${stamp()}.json`);
+
+  // ── tour
+  pinFirstRow() {
+    const key = this._rows[0] && this._rows[0]._key;
+    if (!key || this.state.pinned.includes(key)) return;
+    this.togglePin(key);
+    this._tourPinned = key;
+  }
+  startTour = () => {
+    this.setState({ tutorialTab: null, menuOpen: false });
+    if (!this.state.data.length) {
+      this.setState({ tour: { noData: true, i: 0 }, tourRect: null, tourTip: null });
+      return;
+    }
+    this._tourOrigSearch = this.state.search;
+    this.showTourStep(0);
+  };
+  showTourStep(i) {
+    const step = this.TOUR_STEPS[i];
+    if (step.action) step.action();
+    this.setState({ tour: { noData: false, i } });
+    // Track the target every frame while the tour is open — the layout shift a
+    // step causes (hero collapse, list mount, scrollbar) lands at no fixed time.
+    this._tourScrolled = false;
+    this._tourKey = null;
+    this.trackTour();
+  }
+  trackTour() {
+    if (this._tourRaf) return;
+    const tick = () => {
+      const t = this.state.tour;
+      if (!t || t.noData) { this._tourRaf = null; return; }
+      const step = this.TOUR_STEPS[t.i];
+      const tgt = this.tourTarget(step);
+      const el = tgt && document.querySelector(`[data-tour="${tgt}"]`);
+      if (!el) {
+        if (this.state.tourRect) this.setState({ tourRect: null, tourTip: null });
+        this._tourKey = 'none';
+      } else {
+        const r = el.getBoundingClientRect();
+        if (!this._tourScrolled && (r.top < 60 || r.bottom > window.innerHeight - 60))
+          window.scrollBy({ top: r.top - window.innerHeight / 2 + r.height / 2, behavior: 'smooth' });
+        this._tourScrolled = true;
+        const tip = this.tipRef.current;
+        const key = [r.top, r.left, r.width, r.height, tip ? tip.offsetHeight : 0, window.innerWidth, window.innerHeight].map(Math.round).join();
+        if (key !== this._tourKey) { this._tourKey = key; this.placeTour(el); }
+      }
+      this._tourRaf = requestAnimationFrame(tick);
+    };
+    this._tourRaf = requestAnimationFrame(tick);
+  }
+  positionTour() { this._tourKey = null; this.trackTour(); }
+  tourTarget(step) {
+    if (!this.state.narrow) return step.target === 'del-0' ? 'edit-0' : step.target;
+    return ({ 'edit-0': 'row-0', 'del-0': 'row-0' })[step.target] || step.target;
+  }
+  placeTour(el) {
+    const pad = 6, gap = 14;
+    const r = el.getBoundingClientRect();
+    const tip = this.tipRef.current;
+    const th = tip ? tip.offsetHeight : 180, tw = tip ? tip.offsetWidth : 320;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let top = r.bottom + pad + gap;
+    if (top + th > vh - 8) top = r.top - pad - gap - th;
+    top = Math.max(8, Math.min(vh - th - 8, top));
+    let left = r.left + r.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(vw - tw - 8, left));
+    this.setState({
+      tourRect: { top: r.top - pad, left: r.left - pad, w: r.width + pad * 2, h: r.height + pad * 2 },
+      tourTip: { top, left },
+    });
+  }
+  endTour = () => {
+    cancelAnimationFrame(this._tourRaf); this._tourRaf = null;
+    const t = this.state.tour;
+    this.setState({ tour: null, tourRect: null, tourTip: null });
+    if (this._tourPinned) { this.togglePin(this._tourPinned); this._tourPinned = null; }
+    if (t && !t.noData) this.setSearch(this._tourOrigSearch || '');
+  };
+  nextTour = () => {
+    const t = this.state.tour;
+    if (t.noData) { this.endTour(); this.pickFile(); return; }
+    if (t.i >= this.TOUR_STEPS.length - 1) { this.endTour(); return; }
+    this.showTourStep(t.i + 1);
+  };
+  prevTour = () => { const t = this.state.tour; if (t.i > 0) this.showTourStep(t.i - 1); };
+
+  // ── keyboard
+  onKey(e) {
+    const s = this.state;
+    const inSearch = document.activeElement === this.searchRef.current;
+    const anyOpen = s.modal || s.tutorialTab || s.synOpen || s.tour || s.alert || s.preview;
+    if (e.key === '/' && !inSearch && !anyOpen) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      this.searchRef.current && this.searchRef.current.focus();
+    }
+    if (e.key === 'Escape') {
+      if (s.menuOpen) this.setState({ menuOpen: false });
+      else if (s.alert) this.setState({ alert: null });
+      else if (s.tour) this.endTour();
+      else if (s.preview) this.setState({ preview: null });
+      else if (s.synOpen) this.setState({ synOpen: false, synEdit: null });
+      else if (s.tutorialTab) this.setState({ tutorialTab: null });
+      else if (s.modal) this.setState({ modal: null });
+      else if (s.search) this.setSearch('');
+      else this.searchRef.current && this.searchRef.current.blur();
+    }
+  }
+
+  // Quiet, static backdrop behind the floating layers. No animation: it kept the
+  // compositor busy under every blurred surface on ordinary office PCs.
+  ambient() {
+    if (this._ambient) return this._ambient;
+    const h = React.createElement;
+    this._ambient = h('div', {
+      'aria-hidden': 'true',
+      style: {
+        position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
+        background: 'radial-gradient(120vmax 60vmax at 15% -10%, color-mix(in srgb, var(--ios-blue) 9%, transparent), transparent 70%),'
+          + 'radial-gradient(90vmax 50vmax at 100% 0%, color-mix(in srgb, var(--ios-mint) 7%, transparent), transparent 70%)',
+      },
+    });
+    return this._ambient;
+  }
+  renderVals() {
+    const PS = window.PhoneSearch;
+    const s = this.state;
+    const theme = this.props.theme ?? 'light';
+    const base = {
+      theme, ambientBg: this.ambient(), fileRef: this.fileRef, synFileRef: this.synFileRef, searchRef: this.searchRef,
+      synKeyRef: this.synKeyRef, tipRef: this.tipRef, chipsRef: this.chipsRef,
+      openTutorial: () => this.setState({ tutorialTab: 'search' }),
+      startTour: this.startTour, openSynonyms: () => this.setState({ synOpen: true, synQuery: '', synEdit: null }),
+      pickFile: this.pickFile, exportCSV: this.exportCSV, openAdd: this.openAdd, onFile: this.onFile,
+      onSynFile: this.onSynFile,
+      appTopPad: s.narrow ? '56px' : '0px',
+      menuTop: s.narrow ? '62px' : '56px', menuRight: s.narrow ? '12px' : '16px',
+      canAdd: !!(s.ready && s.data.length),
+      wide: !s.narrow, narrow: s.narrow,
+      heroAlign: s.narrow ? 'left' : 'center', heroJustify: s.narrow ? 'flex-start' : 'center', titleGap: s.narrow ? '12px' : '24px',
+      menuOpen: s.menuOpen, menuExpanded: String(s.menuOpen),
+      toggleMenu: () => this.setState(st => ({ menuOpen: !st.menuOpen })),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      menuItems: (s.data.length ? [
+        ['匯入名冊（xlsx / CSV）', () => this.pickFile()],
+        ['匯出 CSV', () => this.exportCSV()],
+        ...(s.hasPrev ? [['復原匯入', () => this.undoImport()]] : []),
+        ['詞庫管理', () => this.setState({ synOpen: true, synQuery: '', synEdit: null })],
+        ['使用教學', () => this.setState({ tutorialTab: 'search' })],
+        ['互動導覽', () => this.startTour()],
+      ] : [
+        ['手動新增第一筆分機', () => this.openAdd()],
+        ['詞庫管理', () => this.setState({ synOpen: true, synQuery: '', synEdit: null })],
+        ['使用教學', () => this.setState({ tutorialTab: 'search' })],
+      ]).map(([label, fn]) => ({ label, tour: '', onClick: () => { this.setState({ menuOpen: false }); fn(); } })),
+      hasPrev: s.hasPrev, undoImport: this.undoImport,
+      sheetPlace: s.narrow ? 'end stretch' : 'center', sheetPad: s.narrow ? '24px 0 0' : '16px',
+      sheetRadius: s.narrow ? '32px 32px 0 0' : '32px',
+      formW: s.narrow ? '100%' : 'min(480px,100%)', sheetMaxH: s.narrow ? 'calc(100dvh - 24px)' : 'calc(100vh - 32px)',
+      tutW: s.narrow ? '100%' : 'min(760px,95vw)', synW: s.narrow ? '100%' : 'min(780px,96vw)',
+      sheetH: s.narrow ? 'calc(100dvh - 40px)' : 'min(85vh,760px)',
+    };
+    if (!s.ready || !PS) return { ...base, noRoster: false, hasRoster: true, chips: [], chipsQuick: [], chipsDept: [], rows: [], heroPadTop: '18vh', heroMinH: '80vh' };
+
+    const noRoster = s.data.length === 0;
+    const computed = noRoster ? { filtered: [], hasQuery: false, tokens: [], expansions: new Map() } : this.computeRows();
+    const { hasQuery } = computed;
+    let filtered = computed.filtered;
+    const pinned = s.pinned;
+    // Landing view: before any query, list the people this user actually calls —
+    // pinned first (by ext), then recently copied — instead of an empty page.
+    const home = !noRoster && !hasQuery;
+    let homePinCount = 0;
+    if (home) {
+      const byKey = new Map();
+      s.data.forEach((item, originalIndex) => {
+        const k = PS.personKey(item);
+        if (!byKey.has(k)) byKey.set(k, { ...item, originalIndex, _key: k });
+      });
+      const pins = pinned.map(k => byKey.get(k)).filter(Boolean)
+        .sort((a, b) => (parseInt(a.ext) || 9999) - (parseInt(b.ext) || 9999));
+      const recents = s.recent.filter(k => !pinned.includes(k)).map(k => byKey.get(k)).filter(Boolean).slice(0, RECENT_MAX);
+      homePinCount = pins.length;
+      filtered = [...pins, ...recents];
+    }
+    this._rows = filtered;
+    let compact = !noRoster && (filtered.length > 0 || hasQuery);
+
+    const deptSet = new Set(s.data.map(d => d.dept).filter(Boolean));
+    const known = PS.DEPT_ORDER.filter(d => deptSet.has(d));
+    const unknown = [...deptSet].filter(d => !PS.DEPT_ORDER.includes(d));
+    const noTask = s.data.filter(d => !d.task).length;
+    const chipSpecs = [{ key: null, label: '全部' }, { key: 'PINNED', label: pinned.length ? `★ 常用 ${pinned.length}` : '★ 常用' },
+      ...(s.recent.length ? [{ key: 'RECENT', label: `最近 ${s.recent.length}` }] : []),
+      ...[...known, ...unknown].map(d => ({ key: d, label: PS.DEPT_MAP[d] || d })),
+      ...(noTask && s.source === 'stored' ? [{ key: 'NOTASK', label: `待補業務 ${noTask}` }] : [])];
+    const toChip = (c) => ({
+      label: c.label, selected: String(s.activeDept === c.key),
+      cls: s.activeDept === c.key ? 'is-prominent' : 'is-glass',
+      onClick: () => this.setState({ activeDept: c.key }),
+    });
+    const QUICK = [null, 'PINNED', 'RECENT', 'NOTASK'];
+    // Mobile: one swipeable row, departments after the quick filters (待補業務 last).
+    const chips = [...chipSpecs.filter(c => QUICK.includes(c.key) && c.key !== 'NOTASK'),
+      ...chipSpecs.filter(c => !QUICK.includes(c.key)), ...chipSpecs.filter(c => c.key === 'NOTASK')].map(toChip);
+    const chipsQuick = chipSpecs.filter(c => QUICK.includes(c.key)).map(toChip);
+    const chipsDept = chipSpecs.filter(c => !QUICK.includes(c.key)).map(toChip);
+
+    const rows = filtered.map(d => {
+      const m = d._match ? d._match.rangesByField : {};
+      const taskHit = !!(m.task && m.task.length);
+      const isPinned = pinned.includes(d._key);
+      const deptLabel = PS.DEPT_MAP[d.dept] || d.dept || '';
+      const showTags = !s.narrow;
+      const showTask = !s.narrow || taskHit;
+      const idHit = !!(m.id && m.id.length && d.id);
+      return {
+        ext: PS.segments(d.ext, m.ext), name: PS.segments(d.name, m.name), id: PS.segments(d.id, m.id),
+        dept: PS.segments(deptLabel, m.dept), role: PS.segments(d.role, m.role), task: PS.segments(d.task, m.task),
+        taskTitle: d.task || '',
+        showDept: showTags && !!deptLabel, showRole: showTags && !!d.role, showTask, hideTask: !showTask,
+        showId: idHit,
+        isPinned: String(isPinned), pinTitle: isPinned ? '取消釘選' : '釘選常用',
+        pinLabel: isPinned ? `取消釘選 ${d.name}` : `釘選 ${d.name}`,
+        starColor: isPinned ? 'var(--ios-orange)' : 'color-mix(in srgb, var(--ios-label-1) 42%, transparent)',
+        onPin: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.togglePin(d._key); },
+        onCopy: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.copyExt(d); },
+        copyLabel: `複製 ${d.name} 的分機 ${d.ext}`,
+        hasDept: !!deptLabel, hasRole: !!d.role, hasTask: !!d.task,
+        editLabel: `編輯或刪除 ${d.name}`,
+        onEdit: () => this.openEdit(d.originalIndex),
+      };
+    });
+
+    // Say which synonyms / wider readings were searched, so an unexpected hit explains itself.
+    const tokens = PS.tokenize(s.search);
+    const fieldText = (r) => [r.ext, r.name, r.id, r.note, r.task, r.role, r.dept, PS.DEPT_MAP[r.dept]].filter(Boolean).join('\n').toLowerCase();
+    const also = [];
+    if (!home && tokens.length && filtered.length) {
+      const texts = filtered.map(fieldText);
+      for (const tk of tokens) {
+        const own = Object.hasOwn(s.synonyms, tk) && Array.isArray(s.synonyms[tk]) ? s.synonyms[tk] : [];
+        const used = own.filter(a => texts.some(t => t.includes(String(a).toLowerCase())));
+        if (used.length) { also.push(`${used.map(a => `「${a}」`).join('')}（${tk} 的同義詞）`); continue; }
+        const ex = computed.expansions && computed.expansions.get(tk);
+        if (ex) also.push(`「${ex.text}」（${tk} 沒有完全相符）`);
+      }
+    }
+
+    // dept lines / floors — only an xlsx import carries them
+    const di = s.deptInfo && s.deptInfo.depts ? s.deptInfo : null;
+    const deptLabelOf = (d) => PS.DEPT_MAP[d] || d;
+    const cur = di && s.activeDept && di.depts[s.activeDept];
+    const deptCard = cur && (cur.floor || cur.lines.length)
+      ? { title: deptLabelOf(s.activeDept), floor: cur.floor, lines: cur.lines } : null;
+    let lineHits = [];
+    if (di && tokens.length && !deptCard) {
+      const all = [
+        ...(s.deptInfo.general || []).map(line => ({ dept: '公共', floor: '', line })),
+        ...Object.entries(di.depts).filter(([d]) => !s.activeDept || d === s.activeDept)
+          .flatMap(([d, v]) => v.lines.map(line => ({ dept: deptLabelOf(d), full: d, floor: v.floor, line }))),
+      ];
+      lineHits = (home ? [] : all).filter(x => {
+        const hay = `${x.dept} ${x.full || ''} ${x.floor} ${x.line}`.toLowerCase();
+        return tokens.every(t => hay.includes(t));
+      }).slice(0, 8).map(x => ({ ...x, where: x.floor ? `${x.dept}・${x.floor}` : x.dept }));
+      if (lineHits.length && hasQuery) compact = true;
+    }
+    // import preview
+    const pv = s.preview;
+    const pvItem = (r, info) => ({ ext: r.ext, name: r.name, dept: deptLabelOf(r.dept || ''), info });
+    const previewGroups = pv ? [
+      { title: `新增 ${pv.diff.added.length} 人`, color: 'var(--ios-green)', items: pv.diff.added.map(r => pvItem(r, '業務待補')) },
+      { title: `刪除 ${pv.diff.removed.length} 人`, color: 'var(--ios-red)', items: pv.diff.removed.map(r => pvItem(r, r.task || '')) },
+      { title: `變更 ${pv.diff.changed.length} 人`, color: 'var(--ios-orange)', items: pv.diff.changed.map(c => pvItem(c.record,
+        c.diffs.map(f => `${FIELD_LABELS[f.field] || f.field} ${f.from || '（空）'} → ${f.to || '（空）'}`).join('；'))) },
+    ].filter(g => g.items.length) : [];
+    const removedShare = pv && s.data.length ? pv.diff.removed.length / s.data.length : 0;
+    const su = s.serverUpdate;
+    // modal
+    const mv = s.modal ? s.modal.values : EMPTY_FORM;
+    const fld = (key, label, ph, max, extra) => ({
+      label, ph, max, value: mv[key] || '', onChange: (e) => this.setField(key, e.target.value), ...(extra || {}),
+    });
+    const formGroups = [
+      { fields: [fld('name', '姓名 *', '例如：王小明', 50, { required: true }), fld('ext', '分機號碼 *', '例如：000', 30, { required: true })] },
+      { fields: [fld('dept', '科室/部門', '例如：醫政科', 50, { list: 'deptList' }), fld('role', '角色/職稱', '例如：科長 / 照專', 50)] },
+      { fields: [fld('id', '工號', '例如：00000', 20), fld('note', '備註', '備註說明', 100)] },
+    ];
+
+    // tutorial
+    const tabDefs = s.narrow
+      ? [['search', '搜尋'], ['crud', '新增編輯'], ['sync', '匯入匯出'], ['synonym', '詞庫']]
+      : [['search', '搜尋'], ['crud', '新增・編輯・刪除'], ['sync', '匯入與匯出'], ['synonym', '詞庫管理']];
+    const tutTabs = tabDefs.map(([k, label]) => ({
+      label, selected: String(s.tutorialTab === k), cls: s.tutorialTab === k ? 'is-selected' : '',
+      onClick: () => this.setState({ tutorialTab: k }),
+    }));
+
+    // synonyms
+    const q = s.synQuery.trim().toLowerCase();
+    const entries = Object.entries(s.synonyms);
+    const synFiltered = entries.filter(([k, vals]) => !q || k.toLowerCase().includes(q) || vals.some(v => v.toLowerCase().includes(q)));
+    const synRows = synFiltered.map(([k, vals]) => ({
+      key: k, vals, editLabel: `編輯 ${k}`, delLabel: `刪除 ${k}`,
+      onEdit: () => this.openSynEdit(k), onDelete: () => this.deleteSyn(k),
+    }));
+
+    // tour
+    const t = s.tour;
+    const step = t && !t.noData ? this.TOUR_STEPS[t.i] : null;
+    const rect = t && !t.noData ? s.tourRect : null;
+    const tip = t && !t.noData && rect ? s.tourTip : null;
+
+    // alert
+    const al = s.alert;
+
+    return {
+      ...base,
+      noRoster, hasRoster: !noRoster,
+      heroPadTop: s.narrow ? (compact ? '4px' : '6vh') : (compact ? 'max(6vh, 72px)' : '18vh'),
+      heroMinH: compact || s.narrow ? '0vh' : '80vh',
+      showKbd: !s.narrow && !s.search && !s.focused,
+      homeHint: home && filtered.length === 0,
+      search: s.search, hasSearch: !!s.search,
+      onSearch: (e) => this.setSearch(e.target.value),
+      onFocus: () => this.setState({ focused: true }), onBlur: () => this.setState({ focused: false }),
+      clearSearch: () => { this.setSearch(''); this.searchRef.current && this.searchRef.current.focus(); },
+      searchRing: s.focused ? 'inset 0 0 0 2px var(--ios-blue), 0 1px 3px rgba(0,0,0,.06)' : 'inset 0 0 0 1px var(--ios-separator-nonopaque), 0 1px 3px rgba(0,0,0,.06)',
+      chips, chipsQuick, chipsDept,
+      showResults: !noRoster && (hasQuery || filtered.length > 0), count: filtered.length,
+      countText: home
+        ? (homePinCount && filtered.length > homePinCount ? '常用與最近查過' : homePinCount ? '★ 常用' : '最近查過')
+        : `找到 ${filtered.length} 筆`,
+      hasAlso: also.length > 0, alsoText: also.length ? `同時搜尋了 ${also.join('、')}` : '',
+      hasRows: filtered.length > 0, noRows: !home && filtered.length === 0 && !lineHits.length, rows,
+      showCount: filtered.length > 0,
+      emptySub: ({
+        PINNED: '還沒有釘選任何人。搜尋到要找的人後，點那一列右側的 ★ 就能釘選。',
+        RECENT: '點一下分機號碼就會複製，複製過的人會記在這裡。',
+        NOTASK: '每個人的業務都已經填好了。',
+      })[s.activeDept] || (s.activeDept && tokens.length
+        ? `「${PS.DEPT_MAP[s.activeDept] || s.activeDept}」裡沒有符合的人，可能在其他科室。`
+        : '試試換個說法，例如業務名稱（「疫苗」、「執業異動」），或到「更多 → 詞庫管理」新增口語對照。'),
+      emptyShowAll: !!(s.activeDept && !['PINNED', 'RECENT', 'NOTASK'].includes(s.activeDept) && tokens.length),
+      emptyToAll: () => this.setState({ activeDept: null }),
+      hasDeptCard: !!deptCard, deptCardTitle: deptCard ? deptCard.title : '', deptCardFloor: deptCard ? deptCard.floor : '',
+      deptCardHasFloor: !!(deptCard && deptCard.floor), deptCardLines: deptCard ? deptCard.lines : [],
+      hasLineHits: lineHits.length > 0, lineHits,
+      isDemo: s.source === 'demo',
+      hasMeta: !!(s.meta && !noRoster && s.source === 'stored'),
+      metaText: s.meta ? `名冊更新於 ${s.meta.updatedAt}（${s.meta.fileName}）` : '',
+      hasServerUpdate: !!su,
+      serverUpdateText: su ? `共用資料夾的名冊有更新：新增 ${su.diff.added.length}、刪除 ${su.diff.removed.length}、變更 ${su.diff.changed.length} 人` : '',
+      viewServerUpdate: () => su && this.stageImport(su.rows, su.src),
+      skipServerUpdate: () => { if (su) writeStoredJSON(SERVER_SEEN_KEY, su.src.serverHash); this.setState({ serverUpdate: null }); },
+      previewOpen: !!pv, previewTitle: pv ? `匯入預覽：${pv.src.fileName}` : '',
+      previewSummary: pv ? `目前 ${s.data.length} 人 → 匯入後 ${pv.diff.merged.length} 人` : '',
+      previewNote: pv ? (pv.src.kind === 'xlsx'
+        ? 'Excel 分機表不含業務與備註，這兩欄一律保留目前的內容；新增的人業務是空的，套用後可用「待補業務」篩選補上。'
+        : '檔案中空白的業務、備註欄位會保留目前的內容。') : '',
+      previewWarn: removedShare > 0.3,
+      previewWarnText: `這次會刪除 ${Math.round(removedShare * 100)}% 的人員，比例異常偏高。請確認選的是正確、完整的名冊檔案。`,
+      previewGroups,
+      closePreview: () => this.setState({ preview: null }),
+      previewBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ preview: null }); },
+      confirmPreview: this.confirmPreview,
+      hasToast: !!s.toast, toastText: s.toast || '',
+
+      modalOpen: !!s.modal, modalTitle: s.modal ? s.modal.title : '',
+      modalBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ modal: null }); },
+      closeModal: () => this.setState({ modal: null }), submitForm: this.submitForm,
+      formGroups, taskValue: mv.task || '', onTask: (e) => this.setField('task', e.target.value),
+      deptOptions: PS.DEPT_ORDER,
+      showSheetDelete: !!(s.modal && s.modal.idx >= 0),
+      sheetDelete: () => { const idx = s.modal.idx; this.setState({ modal: null }); this.deleteItem(idx); },
+
+      tutorialOpen: !!s.tutorialTab, tutTabs,
+      tabSearch: s.tutorialTab === 'search', tabCrud: s.tutorialTab === 'crud',
+      tabSync: s.tutorialTab === 'sync', tabSynonym: s.tutorialTab === 'synonym',
+      tutPairs: [['打針', '疫苗'], ['IC卡', '機構卡'], ['幼專', '幼兒專責'], ['毒防', '毒品防制'], ['醫療糾紛', '醫糾'], ['心理衛生', '心衛']].map(([a, b]) => ({ a, b })),
+      closeTutorial: () => this.setState({ tutorialTab: null }),
+      tutorialBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ tutorialTab: null }); },
+
+      synOpen: s.synOpen, synQuery: s.synQuery, onSynQuery: (e) => this.setState({ synQuery: e.target.value }),
+      closeSynonyms: () => this.setState({ synOpen: false, synEdit: null }),
+      synBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ synOpen: false, synEdit: null }); },
+      openAddSyn: () => this.openSynEdit(null), pickSynFile: this.pickSynFile, exportSyn: this.exportSyn, resetSyn: this.resetSyn,
+      synEditing: !!s.synEdit, synEditTitle: s.synEdit ? s.synEdit.title : '',
+      synKey: s.synEdit ? s.synEdit.key : '', synVals: s.synEdit ? s.synEdit.vals : '',
+      onSynKey: (e) => { const v = e.target.value; this.setState(st => ({ synEdit: { ...st.synEdit, key: v } })); },
+      onSynVals: (e) => { const v = e.target.value; this.setState(st => ({ synEdit: { ...st.synEdit, vals: v } })); },
+      closeSynEdit: () => this.setState({ synEdit: null }), submitSyn: this.submitSyn,
+      synRows, synEmpty: synFiltered.length === 0,
+      synCountText: `共 ${entries.length} 組對照詞${q ? ` (篩選出 ${synFiltered.length} 組)` : ''}`,
+
+      tourOn: !!t, tourHasRect: !!rect,
+      tourScrimBg: rect ? 'transparent' : 'rgba(0,0,0,.32)',
+      spotTop: rect ? rect.top + 'px' : '0px', spotLeft: rect ? rect.left + 'px' : '0px',
+      spotW: rect ? rect.w + 'px' : '0px', spotH: rect ? rect.h + 'px' : '0px',
+      tipTop: tip ? tip.top + 'px' : '50%', tipLeft: tip ? tip.left + 'px' : '50%',
+      tipTransform: tip ? 'none' : 'translate(-50%, -50%)',
+      tourCount: t && !t.noData ? `${t.i + 1} / ${this.TOUR_STEPS.length}` : '',
+      tourTitle: t ? (t.noData ? '請先匯入名冊' : (s.narrow && step.mTitle) || step.title) : '',
+      tourBody: t ? (t.noData ? '匯入 Excel 分機表或 phoneData.csv 後，才能示範真實的搜尋和編輯操作。' : (s.narrow && step.mBody) || step.body) : '',
+      tourShowNav: !!t && !t.noData,
+      tourPrevCls: t && t.i === 0 ? 'is-disabled' : '',
+      tourNextLabel: t ? (t.noData ? '匯入名冊' : (t.i === this.TOUR_STEPS.length - 1 ? '完成' : '下一步')) : '',
+      endTour: this.endTour, nextTour: this.nextTour, prevTour: this.prevTour,
+
+      alertOpen: !!al, alertTitle: al ? al.title : '', alertMsg: al ? al.message : '', alertHasMsg: !!(al && al.message),
+      alertActions: al ? al.actions.map(a => ({
+        label: a.label, cls: a.cls || '',
+        onClick: () => { this.setState({ alert: null }); if (a.fn) a.fn(); },
+      })) : [],
+    };
+  }
+}
+</script>
+</body>
+</html>

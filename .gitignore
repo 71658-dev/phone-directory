@@ -1,0 +1,8 @@
+# 備份與縮圖
+_backup_*/
+.thumbnail
+
+# 實際名冊與匯出資料（含同事個資，不要上傳）
+phoneData*.csv
+*.xlsx
+phone_directory_synonyms_*.json

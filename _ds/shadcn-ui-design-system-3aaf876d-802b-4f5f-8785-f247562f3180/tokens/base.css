@@ -1,0 +1,4 @@
+/* Minimal base element styles */
+html,body{font-family:var(--font-sans);color:var(--foreground);background:var(--background);-webkit-font-smoothing:antialiased;}
+a{color:var(--foreground);text-decoration:underline;text-underline-offset:4px;}
+a:hover{color:var(--slate-700);}
