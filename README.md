@@ -53,7 +53,7 @@
 | `phone-search.js` | 搜尋、同義詞、CSV/Excel 解析、示範資料 |
 | `ios-kit.css` | 畫面樣式 |
 | `support.js` | 執行環境，負責載入 React 並啟動畫面 |
-| `_ds/` | 介面元件套件 |
+| `_ds/` | 介面元件套件（Claude Design 設計系統，**不包含在 repo 內**） |
 | `vendor/` | React、ReactDOM 等第三方程式庫（本機副本，離線可用） |
 | `favicon.svg` | 網頁小圖示 |
 | `build-single.ps1` | 打包腳本，把上面全部合併成 `分機查詢.html` |
@@ -68,6 +68,8 @@
 ```
 
 腳本只會讀原始檔、寫出 `分機查詢.html`，不會改動其他檔案。打包完如果還有外部檔案參照，會顯示警告。
+
+> 重新打包和開 `index.html` 都需要 `_ds/ios-27-ui-kit-*/_ds_bundle.js`。這是 Claude Design 的設計系統檔案，沒有放進 repo；沒有它的話，請直接使用已打包好的 `分機查詢.html`。
 
 > 開發時直接開 `index.html` 也能測試，但要從本機網站（例如 `npx serve`）開啟，用 `file://` 開會被瀏覽器的安全限制擋住部分功能。
 

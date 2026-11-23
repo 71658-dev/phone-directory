@@ -6,3 +6,6 @@ _backup_*/
 phoneData*.csv
 *.xlsx
 phone_directory_synonyms_*.json
+
+# Claude Design 設計系統（本機用，不上傳）
+_ds/
