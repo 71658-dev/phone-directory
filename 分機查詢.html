@@ -1331,24 +1331,23 @@ async function parseRosterXlsx(buf) {
 
 // Fictitious preview roster — no real people, extensions or staff numbers.
 const DEMO_DATA = [
-  { ext: '101', name: '王小明', id: '00001', note: '', task: '綜理局務', dept: '局長室', role: '局長' },
-  { ext: '120', name: '李小華', id: '00002', note: '', task: '公文收發、財產管理', dept: '行政科', role: '' },
-  { ext: '201', name: '張大同', id: '00003', note: '', task: '醫政科綜理', dept: '醫政科', role: '科長' },
-  { ext: '205', name: '林美玲', id: '00004', note: '', task: 'IC/醫事機構卡申請、支援報備', dept: '醫政科', role: '' },
-  { ext: '207', name: '陳志明', id: '00005', note: '', task: '醫糾調處、緊急救護', dept: '醫政科', role: '' },
-  { ext: '209', name: '黃雅婷', id: '00006', note: '', task: '產家、執業異動', dept: '醫政科', role: '' },
-  { ext: '301', name: '吳建國', id: '00007', note: '', task: '疫苗接種、流感防治', dept: '疾管科', role: '' },
-  { ext: '305', name: '劉淑芬', id: '00008', note: '', task: 'HIV、性病防治', dept: '疾管科', role: '' },
-  { ext: '401', name: '蔡家豪', id: '00009', note: '', task: '食品衛生講習、餐飲評核', dept: '食品藥物科', role: '' },
-  { ext: '405', name: '楊佩君', id: '00010', note: '', task: '化妝品、藥物廣告監控', dept: '食品藥物科', role: '' },
-  { ext: '501', name: '許文傑', id: '00011', note: '', task: '幼兒專責醫師、兒童停車', dept: '國健科', role: '' },
-  { ext: '505', name: '鄭雅雯', id: '00012', note: '', task: '菸害防制、戒菸', dept: '國健科', role: '' },
-  { ext: '601', name: '謝宗翰', id: '00013', note: '', task: '毒品防制、藥癮', dept: '心健科', role: '督導' },
-  { ext: '603', name: '郭怡萱', id: '00014', note: '', task: '心衛社工、自殺關懷員', dept: '心健科', role: '' },
-  { ext: '701', name: '洪子涵', id: '00015', note: '', task: '輔具、交通接送', dept: '新竹市長期照顧管理中心', role: '照專' },
-  { ext: '703', name: '曾俊宏', id: '00016', note: '', task: '住宿式機構補助、外籍看護', dept: '新竹市長期照顧管理中心', role: '照專' },
+  { ext: '101', name: '王小明', id: '00001', note: '', task: '綜理公司業務', dept: '總經理室', role: '總經理' },
+  { ext: '120', name: '李小華', id: '00002', note: '', task: '行政部綜理', dept: '行政部', role: '主任' },
+  { ext: '121', name: '張大同', id: '00003', note: '', task: '文件收發、財產管理', dept: '行政部', role: '' },
+  { ext: '125', name: '林美玲', id: '00004', note: '', task: '會議室借用、公務車派用', dept: '行政部', role: '' },
+  { ext: '201', name: '陳志明', id: '00005', note: '', task: '人力資源部綜理', dept: '人資部', role: '經理' },
+  { ext: '205', name: '黃雅婷', id: '00006', note: '', task: '薪資計算、勞健保', dept: '人資部', role: '' },
+  { ext: '207', name: '吳建國', id: '00007', note: '', task: '差勤管理、教育訓練', dept: '人資部', role: '' },
+  { ext: '301', name: '劉淑芬', id: '00008', note: '', task: '財務部綜理', dept: '財務部', role: '經理' },
+  { ext: '305', name: '蔡家豪', id: '00009', note: '', task: '請款核銷、發票', dept: '財務部', role: '' },
+  { ext: '307', name: '楊佩君', id: '00010', note: '', task: '預算編列、出納', dept: '財務部', role: '' },
+  { ext: '401', name: '許文傑', id: '00011', note: '', task: '資訊部綜理', dept: '資訊部', role: '經理' },
+  { ext: '405', name: '鄭雅雯', id: '00012', note: '', task: '帳號申請、電子郵件', dept: '資訊部', role: '' },
+  { ext: '407', name: '謝宗翰', id: '00013', note: '', task: '資訊安全、網路設備', dept: '資訊部', role: '' },
+  { ext: '409', name: '郭怡萱', id: '00014', note: '', task: '電腦報修、印表機', dept: '資訊部', role: '' },
+  { ext: '501', name: '洪子涵', id: '00015', note: '', task: '客服中心綜理', dept: '客服中心', role: '主任' },
+  { ext: '503', name: '曾俊宏', id: '00016', note: '', task: '客訴處理、服務專線', dept: '客服中心', role: '' },
 ];
-
 window.PhoneSearch = {
   DEPT_MAP, DEPT_ORDER, CSV_HEADERS, DEFAULT_SYNONYMS, DEMO_DATA, setSynonyms,
   tokenize, resolveExpansions, matchRecord, segments, parseCSV, parseRosterCSV, buildCSV,
@@ -3359,7 +3358,7 @@ input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
     <sc-if value="{{ noRoster }}" hint-placeholder-val="{{ false }}">
       <div class="ios-list pg-surface" style="width:100%;padding:24px 16px;margin-bottom:16px;border-radius:28px">
         <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">還沒有分機名冊</div>
-        <p style="font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);margin:0 auto 16px;max-width:30em;text-wrap:pretty">匯入局內的 <strong style="color:var(--ios-label-1)">Excel 分機一覽表 (.xlsx)</strong> 或同事匯出的 <strong style="color:var(--ios-label-1)">phoneData.csv</strong> 就能開始查。資料只存在這台電腦的瀏覽器裡。</p>
+        <p style="font-size:var(--ios-subhead-size);line-height:var(--ios-subhead-lh);color:var(--ios-label-2);margin:0 auto 16px;max-width:30em;text-wrap:pretty">匯入 <strong style="color:var(--ios-label-1)">Excel 分機一覽表 (.xlsx)</strong> 或同事匯出的 <strong style="color:var(--ios-label-1)">phoneData.csv</strong> 就能開始查。資料只存在這台電腦的瀏覽器裡。</p>
         <div style="display:flex;gap:8px;justify-content:{{ heroJustify }};flex-wrap:wrap">
           <button class="ios-btn is-medium is-prominent" onClick="{{ pickFile }}">匯入名冊檔案</button>
           <button class="ios-btn is-medium is-bordered" onClick="{{ openTutorial }}">查看使用教學</button>
@@ -3529,7 +3528,7 @@ input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
           <div>
             <div class="ios-list-header" style="padding-top:0">承辦業務 / 職掌</div>
             <div class="ios-list pg-field" style="width:100%">
-              <textarea rows="3" maxLength="300" placeholder="例如：IC/醫事機構卡申請、支援報備" value="{{ taskValue }}" onChange="{{ onTask }}" style="display:block;width:100%;min-height:90px;padding:14px 16px;border:none;outline:none;resize:vertical;background:transparent;font-family:inherit;font-size:var(--ios-body-size);line-height:var(--ios-body-lh);color:var(--ios-label-1);caret-color:var(--ios-blue)"></textarea>
+              <textarea rows="3" maxLength="300" placeholder="例如：帳號申請、電子郵件" value="{{ taskValue }}" onChange="{{ onTask }}" style="display:block;width:100%;min-height:90px;padding:14px 16px;border:none;outline:none;resize:vertical;background:transparent;font-family:inherit;font-size:var(--ios-body-size);line-height:var(--ios-body-lh);color:var(--ios-label-1);caret-color:var(--ios-blue)"></textarea>
             </div>
           </div>
           <sc-if value="{{ showSheetDelete }}" hint-placeholder-val="{{ false }}">
@@ -3564,7 +3563,7 @@ input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">打幾個字，一次縮到剩幾個人</div>
               <div style="margin-bottom:10px">多個詞用<strong>空格</strong>隔開，只留下同時符合全部詞的人員。</div>
-              <div style="padding:10px 12px;border-radius:10px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)">打 <span style="display:inline-block;padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">醫政</span> <span style="display:inline-block;padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">專責</span> ➜ 只剩醫政科裡承辦專責業務的人。</div>
+              <div style="padding:10px 12px;border-radius:10px;background:var(--ios-fill-4);font-size:var(--ios-footnote-size);line-height:var(--ios-footnote-lh)">打 <span style="display:inline-block;padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">資訊</span> <span style="display:inline-block;padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">帳號</span> ➜ 只剩資訊部裡承辦帳號業務的人。</div>
             </div>
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">打不準也找得到</div>
@@ -3619,7 +3618,7 @@ input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
           <sc-if value="{{ tabSync }}" hint-placeholder-val="{{ false }}">
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">第一次使用</div>
-              <div>畫面出現「還沒有分機名冊」時，按「<strong>匯入名冊檔案</strong>」，選取局內的 <strong>Excel 分機一覽表 (.xlsx)</strong>，或同事匯出的 <code style="font-family:var(--ios-font-mono);font-size:13px">phoneData.csv</code> 就能開始用。</div>
+              <div>畫面出現「還沒有分機名冊」時，按「<strong>匯入名冊檔案</strong>」，選取 <strong>Excel 分機一覽表 (.xlsx)</strong>，或同事匯出的 <code style="font-family:var(--ios-font-mono);font-size:13px">phoneData.csv</code> 就能開始用。</div>
             </div>
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">換成最新名冊</div>
@@ -3640,20 +3639,20 @@ input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
             </div>
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">進階：放在共用網站上（管理員）</div>
-              <div>把這個資料夾放到局內網站，並在同一層放一份 <code style="font-family:var(--ios-font-mono);font-size:13px">phoneData.csv</code>，同事打開網頁時就會自動載入；之後替換這個 CSV，大家的畫面會出現「名冊有更新」提示，按一下就能比對更新。直接從電腦開啟檔案時瀏覽器不允許自動讀取，只能手動匯入。</div>
+              <div>把這個資料夾放到內部網站，並在同一層放一份 <code style="font-family:var(--ios-font-mono);font-size:13px">phoneData.csv</code>，同事打開網頁時就會自動載入；之後替換這個 CSV，大家的畫面會出現「名冊有更新」提示，按一下就能比對更新。直接從電腦開啟檔案時瀏覽器不允許自動讀取，只能手動匯入。</div>
             </div>
           </sc-if>
 
           <sc-if value="{{ tabSynonym }}" hint-placeholder-val="{{ false }}">
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:6px">這是什麼</div>
-              <div>就是「搜尋」頁籤提到的口語對照表——<span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">打針</span> ➜ <span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">疫苗</span> 這類寫法。按右上角「<strong>更多</strong>」→「<strong>詞庫管理</strong>」就能自己新增或調整，不用等改版。</div>
+              <div>就是「搜尋」頁籤提到的口語對照表——<span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">報帳</span> ➜ <span style="padding:0 8px;border-radius:var(--ios-radius-capsule);background:color-mix(in srgb, var(--ios-blue) 12%, transparent);color:var(--ios-blue);font-weight:600">請款</span> 這類寫法。按右上角「<strong>更多</strong>」→「<strong>詞庫管理</strong>」就能自己新增或調整，不用等改版。</div>
             </div>
             <div class="ios-list" style="width:100%;flex-shrink:0;padding:14px 16px">
               <div style="font-size:var(--ios-headline-size);line-height:var(--ios-headline-lh);font-weight:600;margin-bottom:10px">新增對照詞</div>
               <div style="display:flex;flex-direction:column;gap:8px">
                 <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">1</span><span>按「<strong>＋ 新增詞彙</strong>」。</span></div>
-                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">2</span><span>填<strong style="color:var(--ios-blue)">口語 / 民間俗稱</strong>（例如「月子中心」），以及<strong style="color:var(--ios-blue)">對應名冊業務標籤</strong>，多個用逗號隔開（例如「產家, 產後護理」）。</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">2</span><span>填<strong style="color:var(--ios-blue)">口語 / 民間俗稱</strong>（例如「報帳」），以及<strong style="color:var(--ios-blue)">對應名冊業務標籤</strong>，多個用逗號隔開（例如「請款, 核銷」）。</span></div>
                 <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--ios-blue);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">3</span><span>按「<strong>儲存詞彙</strong>」，搜尋馬上就找得到。</span></div>
               </div>
             </div>
@@ -3710,7 +3709,7 @@ input::placeholder, textarea::placeholder { color: var(--ios-label-3); }
               </label>
               <label class="ios-row" style="flex-direction:column;align-items:stretch;gap:2px;padding-top:8px;padding-bottom:6px">
                 <span style="font-size:var(--ios-caption1-size);line-height:var(--ios-caption1-lh);color:var(--ios-label-2)">對應名冊業務標籤 (多個以逗號隔開) *</span>
-                <input value="{{ synVals }}" onChange="{{ onSynVals }}" placeholder="例如：產家, 產後護理" required="{{ true }}" autoComplete="off" style="height:28px;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
+                <input value="{{ synVals }}" onChange="{{ onSynVals }}" placeholder="例如：請款, 核銷" required="{{ true }}" autoComplete="off" style="height:28px;border:none;outline:none;background:transparent;font-family:inherit;font-size:var(--ios-body-size);color:var(--ios-label-1);caret-color:var(--ios-blue)">
               </label>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
@@ -3907,11 +3906,11 @@ class Component extends DCLogic {
 
   TOUR_STEPS = [
     { target: null, title: '快速導覽', body: '帶你直接在畫面上走一次最常用的搜尋和編輯功能，大約 1 分鐘。' },
-    { target: 'search', title: '打幾個字，一次縮到剩幾個人', body: '多個詞用空格隔開，只留下同時符合全部詞的人員。', action: () => this.setSearch('醫政 IC') },
+    { target: 'search', title: '打幾個字，一次縮到剩幾個人', body: '多個詞用空格隔開，只留下同時符合全部詞的人員。', action: () => this.setSearch('資訊 帳號') },
     { target: 'row-0', title: '黃底就是命中的地方', body: '搜尋命中的字會用黃底標出來，一看就懂為什麼是這一筆。' },
     { target: 'pin-0', title: '★ 釘選常用聯絡人', body: '點這顆星星，把常聯絡的人釘選起來；之後一打開這頁就會直接列出來——這裡先幫你點一次示範。', action: () => this.pinFirstRow() },
-    { target: 'search', title: '打不準也找得到', body: '口語、俗稱、縮寫都可以，系統會自動對照到名冊上的寫法，並在結果上方註明同時搜尋了哪些詞。像「打針」會找到「疫苗」。', action: () => this.setSearch('打針') },
-    { target: 'menuBtn', title: '詞庫管理', body: '像「打針→疫苗」這種口語對照都存在詞庫裡。點右上角「更多」再選「詞庫管理」，就能自己新增、修改，不用等改版。匯入、匯出名冊也在這個選單。', mBody: '像「打針→疫苗」這種口語對照都存在詞庫裡。點右上角「⋯」再選「詞庫管理」，就能自己新增、修改，不用等改版。' },
+    { target: 'search', title: '打不準也找得到', body: '縮寫也找得到，像打「資安」會找到「資訊安全」。口語或俗稱可以在詞庫裡設定對照，用到時結果上方會註明同時搜尋了哪些詞。', action: () => this.setSearch('資安') },
+    { target: 'menuBtn', title: '詞庫管理', body: '像「報帳→請款」這種口語對照都存在詞庫裡。點右上角「更多」再選「詞庫管理」，就能自己新增、修改，不用等改版。匯入、匯出名冊也在這個選單。', mBody: '像「報帳→請款」這種口語對照都存在詞庫裡。點右上角「⋯」再選「詞庫管理」，就能自己新增、修改，不用等改版。' },
     { target: 'search', title: '快捷鍵', body: '搜尋框右邊的 / 是提示：在頁面任何地方按 /，就會跳到搜尋框開始打字；按 Esc 清空搜尋，或關掉目前開啟的視窗。', mTitle: '清除搜尋', mBody: '手機上直接點搜尋框就能開始打字，點右側的 ✕ 清空搜尋。' },
     { target: 'chips', title: '科室篩選', body: '點科室按鈕只看該科室的人；剛剛釘選的人，已經出現在「★ 常用」裡了。' },
     { target: 'addBtn', title: '新增', body: '按這裡開新增視窗，填姓名和分機（必填）再按「儲存」，馬上生效。', mBody: '按右上角的「＋」開新增視窗，填姓名和分機（必填）再按右上角「儲存」，馬上生效。' },
@@ -4592,7 +4591,7 @@ class Component extends DCLogic {
     });
     const formGroups = [
       { fields: [fld('name', '姓名 *', '例如：王小明', 50, { required: true }), fld('ext', '分機號碼 *', '例如：000', 30, { required: true })] },
-      { fields: [fld('dept', '科室/部門', '例如：醫政科', 50, { list: 'deptList' }), fld('role', '角色/職稱', '例如：科長 / 照專', 50)] },
+      { fields: [fld('dept', '科室/部門', '例如：資訊部', 50, { list: 'deptList' }), fld('role', '角色/職稱', '例如：主任 / 專員', 50)] },
       { fields: [fld('id', '工號', '例如：00000', 20), fld('note', '備註', '備註說明', 100)] },
     ];
 
@@ -4649,7 +4648,7 @@ class Component extends DCLogic {
         NOTASK: '每個人的業務都已經填好了。',
       })[s.activeDept] || (s.activeDept && tokens.length
         ? `「${PS.DEPT_MAP[s.activeDept] || s.activeDept}」裡沒有符合的人，可能在其他科室。`
-        : '試試換個說法，例如業務名稱（「疫苗」、「執業異動」），或到「更多 → 詞庫管理」新增口語對照。'),
+        : '試試換個說法，例如業務名稱（「請款」、「報修」），或到「更多 → 詞庫管理」新增口語對照。'),
       emptyShowAll: !!(s.activeDept && !['PINNED', 'RECENT', 'NOTASK'].includes(s.activeDept) && tokens.length),
       emptyToAll: () => this.setState({ activeDept: null }),
       hasDeptCard: !!deptCard, deptCardTitle: deptCard ? deptCard.title : '', deptCardFloor: deptCard ? deptCard.floor : '',
@@ -4679,14 +4678,14 @@ class Component extends DCLogic {
       modalBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ modal: null }); },
       closeModal: () => this.setState({ modal: null }), submitForm: this.submitForm,
       formGroups, taskValue: mv.task || '', onTask: (e) => this.setField('task', e.target.value),
-      deptOptions: PS.DEPT_ORDER,
+      deptOptions: [...new Set(s.data.map(d => d.dept).filter(Boolean))],
       showSheetDelete: !!(s.modal && s.modal.idx >= 0),
       sheetDelete: () => { const idx = s.modal.idx; this.setState({ modal: null }); this.deleteItem(idx); },
 
       tutorialOpen: !!s.tutorialTab, tutTabs,
       tabSearch: s.tutorialTab === 'search', tabCrud: s.tutorialTab === 'crud',
       tabSync: s.tutorialTab === 'sync', tabSynonym: s.tutorialTab === 'synonym',
-      tutPairs: [['打針', '疫苗'], ['IC卡', '機構卡'], ['幼專', '幼兒專責'], ['毒防', '毒品防制'], ['醫療糾紛', '醫糾'], ['心理衛生', '心衛']].map(([a, b]) => ({ a, b })),
+      tutPairs: [['報帳', '請款'], ['資安', '資訊安全'], ['薪水', '薪資'], ['請假', '差勤'], ['電腦壞了', '報修'], ['人資', '人力資源']].map(([a, b]) => ({ a, b })),
       closeTutorial: () => this.setState({ tutorialTab: null }),
       tutorialBackdrop: (e) => { if (e.target === e.currentTarget) this.setState({ tutorialTab: null }); },
 
